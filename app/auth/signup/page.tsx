@@ -12,7 +12,6 @@ import { Label } from "@/components/ui/label"
 import { UserPlus } from "lucide-react"
 import SimpleGoogleButton from "@/components/auth/SimpleGoogleButton"
 import RoleSelector from "@/components/auth/RoleSelector"
-import Image from "next/image"
 import type { UserRoles } from "@/types/auth-types"
 
 export default function SignupPage() {
@@ -27,6 +26,7 @@ export default function SignupPage() {
     battler: false,
     league_owner: false,
     admin: false,
+    community_manager: false
   })
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
@@ -59,11 +59,15 @@ export default function SignupPage() {
     setIsLoading(true)
 
     try {
+      console.log("Submitting signup with roles:", JSON.stringify(roles));
       const { data, error } = await signUp(email, password, roles)
+      
       if (error) {
-        setError(error.message)
+        console.error("Signup error:", error);
+        setError(error.message || "Database error saving new user")
       } else {
         setSuccess("Registration successful! Please check your email to confirm your account.")
+        router.push("/auth/welcome") 
         // Clear form
         setEmail("")
         setPassword("")
@@ -74,10 +78,12 @@ export default function SignupPage() {
           battler: false,
           league_owner: false,
           admin: false,
+          community_manager: false
         })
         setStep(1)
       }
     } catch (err: any) {
+      console.error("Caught exception during signup:", err);
       setError(err.message || "An error occurred during registration")
     } finally {
       setIsLoading(false)
@@ -89,15 +95,7 @@ export default function SignupPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <div className="flex items-center justify-center mb-4">
-            <Image
-              src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/1ahq-LogoshiRes-enhance-3.4x.png-RgnWSrnet4mLXiyHJq8wddQ1bMJ8Wr.jpeg"
-              alt="Algorithm Institute of Battle Rap"
-              width={180}
-              height={45}
-              className="object-contain"
-              priority
-              style={{ maxHeight: "45px" }}
-            />
+            <h1 className="text-3xl font-bold text-amber-500">ALGORITHM INSTITUTE</h1>
           </div>
           <CardTitle className="text-2xl text-center">Create an Account</CardTitle>
           <CardDescription className="text-center">
@@ -210,4 +208,3 @@ export default function SignupPage() {
     </div>
   )
 }
-

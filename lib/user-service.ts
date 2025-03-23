@@ -1,576 +1,579 @@
 "use server"
 
-import type { UserProfile, SocialLinks, YouTubeChannel, ContentLink } from "@/types/auth-types"
+import { redirect } from "next/navigation"
+import type { UserProfile, SocialLinks, ContentLink } from "@/types/auth-types"
 import type { UserPrivacySettings } from "@/components/profile/PrivacySettings"
-import { supabase } from "@/lib/supabase"
+import { createServerComponentClient } from "@supabase/auth-helpers-nextjs"
+import { cookies } from "next/headers"
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
 
-// Mock data for user profiles
-const userProfiles: UserProfile[] = [
-  {
-    id: "1",
-    email: "jay.blac@example.com",
-    displayName: "Jay Blac",
-    username: "jayblac",
-    roles: {
-      fan: true,
-      media: true,
-      battler: false,
-      league_owner: false,
-      admin: false,
-    },
-    verified: true,
-    createdAt: "2022-01-15T00:00:00Z",
-    bio: "Battle rap analyst and host of Champion. Covering the culture since 2009.",
-    location: "New York, NY",
-    website: "https://champion.example.com",
-    profileImage: "/placeholder.svg?height=400&width=400&text=Jay+Blac",
-    bannerImage: "/placeholder.svg?height=200&width=1200&text=Champion",
-    socialLinks: {
-      youtube: "https://youtube.com/champion",
-      twitter: "https://twitter.com/jayblac",
-      instagram: "https://instagram.com/jayblac",
-    },
-    youtubeChannels: [
-      {
-        id: "channel1",
-        url: "https://youtube.com/champion",
-        name: "Champion",
-        description: "The #1 Battle Rap Media Platform",
-        subscriberCount: 250000,
-        videoCount: 1200,
-        viewCount: 45000000,
-      },
-    ],
-    mediaOutlet: "Champion",
-    followers: 1245,
-    following: 87,
-    badges: ["Verified Critic", "Battle Historian", "Top Contributor"],
-  },
-  {
-    id: "2",
-    email: "loaded.lux@example.com",
-    displayName: "Loaded Lux",
-    username: "loadedlux",
-    roles: {
-      fan: true,
-      media: false,
-      battler: true,
-      league_owner: false,
-      admin: false,
-    },
-    verified: true,
-    createdAt: "2022-02-20T00:00:00Z",
-    bio: "Harlem legend. You gon get this work.",
-    location: "Harlem, NY",
-    profileImage: "/placeholder.svg?height=400&width=400&text=Loaded+Lux",
-    bannerImage: "/placeholder.svg?height=200&width=1200&text=Loaded+Lux",
-    socialLinks: {
-      twitter: "https://twitter.com/loadedlux",
-      instagram: "https://instagram.com/loadedlux",
-    },
-    battlerId: "1",
-    followers: 2345,
-    following: 124,
-    badges: ["Elite Battler", "Veteran Member"],
-  },
-  {
-    id: "3",
-    email: "url.tv@example.com",
-    displayName: "URL TV",
-    username: "urltv",
-    roles: {
-      fan: false,
-      media: false,
-      battler: false,
-      league_owner: true,
-      admin: false,
-    },
-    verified: true,
-    createdAt: "2022-01-10T00:00:00Z",
-    bio: "Ultimate Rap League - The World's Most Respected Battle Rap Platform",
-    location: "New York, NY",
-    website: "https://urltv.tv",
-    profileImage: "/placeholder.svg?height=400&width=400&text=URL+TV",
-    bannerImage: "/placeholder.svg?height=200&width=1200&text=URL+TV",
-    socialLinks: {
-      youtube: "https://youtube.com/urltv",
-      twitter: "https://twitter.com/urltv",
-      instagram: "https://instagram.com/urltv",
-    },
-    youtubeChannels: [
-      {
-        id: "channel2",
-        url: "https://youtube.com/urltv",
-        name: "URL TV",
-        description: "Ultimate Rap League - The World's Most Respected Battle Rap Platform",
-        subscriberCount: 1200000,
-        videoCount: 3500,
-        viewCount: 350000000,
-      },
-    ],
-    leagueId: "1",
-    followers: 5678,
-    following: 45,
-    badges: ["Verified League", "Platform Pioneer"],
-  },
-]
-
-// Mock data for user follows
-const userFollows: { userId: string; followingId: string }[] = []
-
-// Mock data for user privacy settings
-const userPrivacySettings: Record<string, UserPrivacySettings> = {
-  "1": {
-    visibilityLevel: "medium",
-    showEmail: false,
-    showRatings: true,
-    showBadges: true,
-    showHistoricalData: false,
-  },
-  "2": {
-    visibilityLevel: "high",
-    showEmail: false,
-    showRatings: true,
-    showBadges: true,
-    showHistoricalData: true,
-  },
-  "3": {
-    visibilityLevel: "medium",
-    showEmail: false,
-    showRatings: true,
-    showBadges: true,
-    showHistoricalData: false,
-  },
-}
-
-// Mock data for community manager requests
-interface CommunityManagerRequest {
-  id: string
-  userId: string
-  reason: string
-  status: "pending" | "approved" | "rejected"
-  createdAt: string
-  reviewedAt?: string
-  reviewedBy?: string
-}
-
-const communityManagerRequests: CommunityManagerRequest[] = [
-  {
-    id: "1",
-    userId: "4",
-    reason: "I've been following battle rap for 10 years and have extensive knowledge of the culture.",
-    status: "approved",
-    createdAt: "2023-05-15T00:00:00Z",
-    reviewedAt: "2023-05-17T00:00:00Z",
-    reviewedBy: "1",
-  },
-  {
-    id: "2",
-    userId: "5",
-    reason: "I run a battle rap blog and want to contribute to the platform.",
-    status: "pending",
-    createdAt: "2023-06-20T00:00:00Z",
-  },
-]
-
-export async function requestCommunityManagerRole(userId: string, reason: string): Promise<void> {
-  // In a real app, this would insert into a database
-  const newRequest: CommunityManagerRequest = {
-    id: crypto.randomUUID(),
-    userId,
-    reason,
-    status: "pending",
-    createdAt: new Date().toISOString(),
-  }
-
-  communityManagerRequests.push(newRequest)
-
-  // In a real app, you would also notify admins of the new request
-}
-
-export async function getCommunityManagerRequests(): Promise<CommunityManagerRequest[]> {
-  // In a real app, this would fetch from a database
-  return communityManagerRequests
-}
-
-export async function reviewCommunityManagerRequest(
-  requestId: string,
-  status: "approved" | "rejected",
-  reviewerId: string,
-): Promise<void> {
-  // In a real app, this would update a database record
-  const requestIndex = communityManagerRequests.findIndex((req) => req.id === requestId)
-
-  if (requestIndex === -1) {
-    throw new Error("Request not found")
-  }
-
-  communityManagerRequests[requestIndex] = {
-    ...communityManagerRequests[requestIndex],
-    status,
-    reviewedAt: new Date().toISOString(),
-    reviewedBy: reviewerId,
-  }
-
-  // If approved, update the user's roles
-  if (status === "approved") {
-    const userId = communityManagerRequests[requestIndex].userId
-
-    // In a real app, this would update the user's roles in the database
-    const userIndex = userProfiles.findIndex((u) => u.id === userId)
-
-    if (userIndex !== -1) {
-      userProfiles[userIndex] = {
-        ...userProfiles[userIndex],
-        roles: {
-          ...userProfiles[userIndex].roles,
-          community_manager: true,
-        },
-      }
+/**
+ * Gets a user profile by ID
+ */
+export async function getUserProfile(userId: string): Promise<UserProfile | null> {
+  try {
+    const supabase = createServerComponentClient({ cookies })
+    
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('id', userId)
+      .single()
+    
+    if (error || !data) {
+      console.error('Error getting user profile:', error)
+      return null
     }
+    
+    return data as UserProfile
+  } catch (error) {
+    console.error('Error getting user profile:', error)
+    return null
   }
 }
 
-export async function hasPendingCommunityManagerRequest(userId: string): Promise<boolean> {
-  // In a real app, this would query your database
-  return communityManagerRequests.some((req) => req.userId === userId && req.status === "pending")
-}
-
-export async function isCommunityManager(userId: string): Promise<boolean> {
-  // In a real app, this would query your database
-  const userIndex = userProfiles.findIndex((u) => u.id === userId)
-
-  if (userIndex === -1) {
-    return false
-  }
-
-  return !!userProfiles[userIndex].roles.community_manager
-}
-
-export async function getUserByUsername(username: string): Promise<UserProfile | null> {
-  // In a real app, this would query your database
-  const user = userProfiles.find((u) => u.username === username)
-  return user || null
-}
-
-export async function updateUserProfile(userId: string, data: Partial<UserProfile>): Promise<UserProfile> {
-  // In a real app, this would update your database
-  const userIndex = userProfiles.findIndex((u) => u.id === userId)
-
-  if (userIndex === -1) {
-    throw new Error("User not found")
-  }
-
-  const updatedUser = {
-    ...userProfiles[userIndex],
-    ...data,
-  }
-
-  userProfiles[userIndex] = updatedUser
-
-  return updatedUser
-}
-
-export async function updateUserSocialLinks(userId: string, links: SocialLinks): Promise<UserProfile> {
-  // In a real app, this would update your database
-  const userIndex = userProfiles.findIndex((u) => u.id === userId)
-
-  if (userIndex === -1) {
-    throw new Error("User not found")
-  }
-
-  const updatedUser = {
-    ...userProfiles[userIndex],
-    socialLinks: links,
-  }
-
-  userProfiles[userIndex] = updatedUser
-
-  return updatedUser
-}
-
-export async function updateUserYouTubeChannels(userId: string, channels: YouTubeChannel[]): Promise<UserProfile> {
-  // In a real app, this would update your database
-  const userIndex = userProfiles.findIndex((u) => u.id === userId)
-
-  if (userIndex === -1) {
-    throw new Error("User not found")
-  }
-
-  const updatedUser = {
-    ...userProfiles[userIndex],
-    youtubeChannels: channels,
-  }
-
-  userProfiles[userIndex] = updatedUser
-
-  return updatedUser
-}
-
+/**
+ * Gets a user's privacy settings
+ */
 export async function getUserPrivacySettings(userId: string): Promise<UserPrivacySettings | null> {
-  // In a real app, this would query your database
-  return userPrivacySettings[userId] || null
+  try {
+    const supabase = createServerComponentClient({ cookies })
+    
+    const { data, error } = await supabase
+      .from('user_privacy_settings')
+      .select('*')
+      .eq('user_id', userId)
+      .single()
+    
+    if (error) {
+      // If no settings exist yet, create default settings
+      if (error.code === 'PGRST116') {
+        const defaultSettings: UserPrivacySettings = {
+          visibilityLevel: "medium",
+          showEmail: false,
+          showRatings: true,
+          showBadges: true,
+          showHistoricalData: false
+        }
+        
+        return defaultSettings
+      }
+      
+      console.error('Error getting user privacy settings:', error)
+      return null
+    }
+    
+    return data as UserPrivacySettings
+  } catch (error) {
+    console.error('Error getting user privacy settings:', error)
+    return null
+  }
 }
 
+/**
+ * Updates a user's privacy settings
+ */
 export async function updateUserPrivacySettings(
   userId: string,
   settings: UserPrivacySettings,
 ): Promise<UserPrivacySettings> {
-  // In a real app, this would update your database
-  userPrivacySettings[userId] = settings
-  return settings
+  try {
+    const supabase = createServerComponentClient({ cookies })
+    
+    // Check if settings already exist
+    const { data: existingSettings, error: checkError } = await supabase
+      .from('user_privacy_settings')
+      .select('*')
+      .eq('user_id', userId)
+      .single()
+    
+    if (checkError && checkError.code !== 'PGRST116') {
+      console.error('Error checking user privacy settings:', checkError)
+      throw new Error('Failed to update privacy settings')
+    }
+    
+    // If settings exist, update them; otherwise, insert new settings
+    const operation = existingSettings 
+      ? supabase.from('user_privacy_settings').update(settings).eq('user_id', userId)
+      : supabase.from('user_privacy_settings').insert({ ...settings, user_id: userId })
+    
+    const { error } = await operation
+    
+    if (error) {
+      console.error('Error updating user privacy settings:', error)
+      throw new Error('Failed to update privacy settings')
+    }
+    
+    return settings
+  } catch (error) {
+    console.error('Error updating user privacy settings:', error)
+    throw new Error('Failed to update privacy settings')
+  }
 }
 
+/**
+ * Follows a user
+ */
 export async function followUser(followingId: string): Promise<void> {
-  // In a real app, this would update your database
-  // For now, we'll just use the first user as the current user
-  const currentUserId = "1"
-
-  // Check if already following
-  const alreadyFollowing = userFollows.some(
-    (follow) => follow.userId === currentUserId && follow.followingId === followingId,
-  )
-
-  if (!alreadyFollowing) {
-    userFollows.push({
-      userId: currentUserId,
-      followingId,
-    })
-
-    // Update follower count
-    const userIndex = userProfiles.findIndex((u) => u.id === followingId)
-    if (userIndex !== -1) {
-      userProfiles[userIndex].followers = (userProfiles[userIndex].followers || 0) + 1
+  try {
+    const supabase = createServerComponentClient({ cookies })
+    
+    // Get the current user
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    
+    if (userError || !user) {
+      console.error('Error getting current user:', userError)
+      throw new Error('You must be logged in to follow a user')
     }
-
-    // Update following count
-    const currentUserIndex = userProfiles.findIndex((u) => u.id === currentUserId)
-    if (currentUserIndex !== -1) {
-      userProfiles[currentUserIndex].following = (userProfiles[currentUserIndex].following || 0) + 1
+    
+    // Check if already following
+    const { data: existingFollow, error: checkError } = await supabase
+      .from('user_follows')
+      .select('*')
+      .eq('follower_id', user.id)
+      .eq('followed_id', followingId)
+      .single()
+    
+    if (existingFollow) {
+      // Already following, no action needed
+      return
     }
+    
+    // Create the follow relationship
+    const { error } = await supabase
+      .from('user_follows')
+      .insert({
+        follower_id: user.id,
+        followed_id: followingId
+      })
+    
+    if (error) {
+      console.error('Error following user:', error)
+      throw new Error('Failed to follow user')
+    }
+  } catch (error) {
+    console.error('Error following user:', error)
+    throw error
   }
 }
 
+/**
+ * Unfollows a user
+ */
 export async function unfollowUser(followingId: string): Promise<void> {
-  // In a real app, this would update your database
-  // For now, we'll just use the first user as the current user
-  const currentUserId = "1"
-
-  // Remove follow relationship
-  const followIndex = userFollows.findIndex(
-    (follow) => follow.userId === currentUserId && follow.followingId === followingId,
-  )
-
-  if (followIndex !== -1) {
-    userFollows.splice(followIndex, 1)
-
-    // Update follower count
-    const userIndex = userProfiles.findIndex((u) => u.id === followingId)
-    if (userIndex !== -1 && userProfiles[userIndex].followers) {
-      userProfiles[userIndex].followers -= 1
+  try {
+    const supabase = createServerComponentClient({ cookies })
+    
+    // Get the current user
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    
+    if (userError || !user) {
+      console.error('Error getting current user:', userError)
+      throw new Error('You must be logged in to unfollow a user')
     }
-
-    // Update following count
-    const currentUserIndex = userProfiles.findIndex((u) => u.id === currentUserId)
-    if (currentUserIndex !== -1 && userProfiles[currentUserIndex].following) {
-      userProfiles[currentUserIndex].following -= 1
+    
+    // Delete the follow relationship
+    const { error } = await supabase
+      .from('user_follows')
+      .delete()
+      .eq('follower_id', user.id)
+      .eq('followed_id', followingId)
+    
+    if (error) {
+      console.error('Error unfollowing user:', error)
+      throw new Error('Failed to unfollow user')
     }
+  } catch (error) {
+    console.error('Error unfollowing user:', error)
+    throw error
   }
 }
 
+/**
+ * Get a user's followers
+ */
 export async function getUserFollowers(userId: string): Promise<UserProfile[]> {
-  // In a real app, this would query your database
-  const followerIds = userFollows.filter((follow) => follow.followingId === userId).map((follow) => follow.userId)
-
-  return userProfiles.filter((user) => followerIds.includes(user.id))
+  try {
+    const supabase = createServerComponentClient({ cookies })
+    
+    // Get followers IDs
+    const { data: follows, error: followsError } = await supabase
+      .from('user_follows')
+      .select('follower_id')
+      .eq('followed_id', userId)
+    
+    if (followsError || !follows || follows.length === 0) {
+      return []
+    }
+    
+    // Get follower profiles
+    const followerIds = follows.map(follow => follow.follower_id)
+    
+    const { data: profiles, error: profilesError } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .in('id', followerIds)
+    
+    if (profilesError || !profiles) {
+      console.error('Error getting follower profiles:', profilesError)
+      return []
+    }
+    
+    return profiles as UserProfile[]
+  } catch (error) {
+    console.error('Error getting user followers:', error)
+    return []
+  }
 }
 
+/**
+ * Get users a user is following
+ */
 export async function getUserFollowing(userId: string): Promise<UserProfile[]> {
-  // In a real app, this would query your database
-  const followingIds = userFollows.filter((follow) => follow.userId === userId).map((follow) => follow.followingId)
-
-  return userProfiles.filter((user) => followingIds.includes(user.id))
+  try {
+    const supabase = createServerComponentClient({ cookies })
+    
+    // Get following IDs
+    const { data: follows, error: followsError } = await supabase
+      .from('user_follows')
+      .select('followed_id')
+      .eq('follower_id', userId)
+    
+    if (followsError || !follows || follows.length === 0) {
+      return []
+    }
+    
+    // Get following profiles
+    const followingIds = follows.map(follow => follow.followed_id)
+    
+    const { data: profiles, error: profilesError } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .in('id', followingIds)
+    
+    if (profilesError || !profiles) {
+      console.error('Error getting following profiles:', profilesError)
+      return []
+    }
+    
+    return profiles as UserProfile[]
+  } catch (error) {
+    console.error('Error getting user following:', error)
+    return []
+  }
 }
 
+/**
+ * Check if a user is following another user
+ */
 export async function isFollowing(userId: string, followingId: string): Promise<boolean> {
-  // In a real app, this would query your database
-  return userFollows.some((follow) => follow.userId === userId && follow.followingId === followingId)
+  try {
+    const supabase = createServerComponentClient({ cookies })
+    
+    const { data, error } = await supabase
+      .from('user_follows')
+      .select('*')
+      .eq('follower_id', userId)
+      .eq('followed_id', followingId)
+      .single()
+    
+    return !!data && !error
+  } catch (error) {
+    console.error('Error checking if following:', error)
+    return false
+  }
 }
 
+/**
+ * Get all users
+ */
 export async function getAllUsers(): Promise<UserProfile[]> {
-  // In a real app, this would query your database
-  return userProfiles
+  try {
+    const supabase = createServerComponentClient({ cookies })
+    
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .select('*')
+    
+    if (error || !data) {
+      console.error('Error getting all users:', error)
+      return []
+    }
+    
+    return data as UserProfile[]
+  } catch (error) {
+    console.error('Error getting all users:', error)
+    return []
+  }
 }
 
+/**
+ * Get all community managers
+ */
 export async function getCommunityManagers(): Promise<UserProfile[]> {
-  // In a real app, this would fetch from your database
-  const { data, error } = await supabase.from("user_profiles").select("*").eq("roles->community_manager", true)
-
-  if (error) {
-    console.error("Error fetching community managers:", error)
-    throw error
-  }
-
-  return data as UserProfile[]
-}
-
-export async function addCommunityManager(email: string): Promise<UserProfile> {
-  // First, check if the user exists
-  const { data: user, error: userError } = await supabase.from("user_profiles").select("*").eq("email", email).single()
-
-  if (userError || !user) {
-    throw new Error("User not found")
-  }
-
-  // Update the user's roles
-  const updatedRoles = {
-    ...user.roles,
-    community_manager: true,
-  }
-
-  const { data, error } = await supabase
-    .from("user_profiles")
-    .update({ roles: updatedRoles })
-    .eq("id", user.id)
-    .select("*")
-    .single()
-
-  if (error) {
-    console.error("Error adding community manager:", error)
-    throw error
-  }
-
-  return data as UserProfile
-}
-
-export async function removeCommunityManager(userId: string): Promise<void> {
-  // Get the user's current roles
-  const { data: user, error: userError } = await supabase
-    .from("user_profiles")
-    .select("roles")
-    .eq("id", userId)
-    .single()
-
-  if (userError || !user) {
-    throw new Error("User not found")
-  }
-
-  // Update the user's roles
-  const updatedRoles = { ...user.roles, community_manager: false }
-
-  const { error } = await supabase.from("user_profiles").update({ roles: updatedRoles }).eq("id", userId)
-
-  if (error) {
-    console.error("Error removing community manager:", error)
-    throw error
+  try {
+    const supabase = createServerComponentClient({ cookies })
+    
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('roles->community_manager', true)
+    
+    if (error || !data) {
+      console.error('Error getting community managers:', error)
+      return []
+    }
+    
+    return data as UserProfile[]
+  } catch (error) {
+    console.error('Error getting community managers:', error)
+    return []
   }
 }
 
-export async function getUserContentLinks(userId: string): Promise<ContentLink[]> {
-  // In a real app, this would fetch from your database
-  const { data, error } = await supabase
-    .from("content_links")
-    .select("*")
-    .eq("userId", userId)
-    .order("createdAt", { ascending: false })
-
-  if (error) {
-    console.error("Error fetching content links:", error)
-    throw error
-  }
-
-  return data as ContentLink[]
-}
-
-export async function addContentLink(link: Omit<ContentLink, "id" | "createdAt" | "likes">): Promise<ContentLink> {
-  const newLink = {
-    ...link,
-    id: crypto.randomUUID(),
-    createdAt: new Date().toISOString(),
-    likes: 0,
-  }
-
-  const { data, error } = await supabase.from("content_links").insert(newLink).select("*").single()
-
-  if (error) {
-    console.error("Error adding content link:", error)
-    throw error
-  }
-
-  return data as ContentLink
-}
-
-export async function deleteContentLink(id: string): Promise<void> {
-  const { error } = await supabase.from("content_links").delete().eq("id", id)
-
-  if (error) {
-    console.error("Error deleting content link:", error)
-    throw error
-  }
-}
-
-export async function likeContentLink(id: string): Promise<void> {
-  // In a real app, you would track which users have liked which content
-  // For now, we'll just increment the likes count
-  const { data, error } = await supabase.from("content_links").select("likes").eq("id", id).single()
-
-  if (error) {
-    console.error("Error fetching content link:", error)
-    throw error
-  }
-
-  const { error: updateError } = await supabase
-    .from("content_links")
-    .update({ likes: (data.likes || 0) + 1 })
-    .eq("id", id)
-
-  if (updateError) {
-    console.error("Error liking content link:", updateError)
-    throw updateError
-  }
-}
-
-import type { Battler } from "@/types/auth-types"
-
-export async function getUserAddedBattlers(userId: string): Promise<Battler[]> {
-  // In a real app, this would query your database
-  const { data, error } = await supabase
-    .from("battlers")
-    .select("*")
-    .eq("addedBy", userId)
-    .order("createdAt", { ascending: false })
-
-  if (error) {
-    console.error("Error fetching user added battlers:", error)
-    throw error
-  }
-
-  return data as Battler[]
-}
-
-export async function updateUserAddedBattler(userId: string, battleId: string): Promise<void> {
-  // In a real app, this would update the user's addedBattlers array
-  const { data: user, error: userError } = await supabase
-    .from("user_profiles")
-    .select("addedBattlers")
-    .eq("id", userId)
-    .single()
-
-  if (userError) {
-    console.error("Error fetching user:", userError)
-    throw userError
-  }
-
-  const addedBattlers = user?.addedBattlers || []
-
-  const { error } = await supabase
-    .from("user_profiles")
-    .update({ addedBattlers: [...addedBattlers, battleId] })
-    .eq("id", userId)
-
-  if (error) {
-    console.error("Error updating user's addedBattlers:", error)
-    throw error
+/**
+ * Confirm a media user
+ */
+export async function confirmMediaUser(userId: string): Promise<UserProfile> {
+  try {
+    const supabase = createServerComponentClient({ cookies })
+    
+    // Check if the current user is taskmasterpeace or an admin
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error("You must be logged in to confirm media users")
+    
+    const { data: currentProfile, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('email, roles')
+      .eq('id', user.id)
+      .single()
+    
+    if (profileError || !currentProfile) {
+      throw new Error("Error fetching your profile")
+    }
+    
+    const isTaskmasterpeace = currentProfile.email?.toLowerCase() === "taskmasterpeace@gmail.com"
+    const isAdmin = currentProfile.roles?.admin === true
+    
+    if (!isTaskmasterpeace && !isAdmin) {
+      throw new Error("Only taskmasterpeace and admins can confirm media users")
+    }
+    
+    // Find the user to update
+    const { data: userToUpdate, error: findError } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('id', userId)
+      .single()
+    
+    if (findError || !userToUpdate) {
+      throw new Error("User not found")
+    }
+    
+    // Make sure the user is a media user
+    if (!userToUpdate.roles?.media) {
+      throw new Error("This user is not a media user")
+    }
+    
+    // Update the user's roles
+    const updatedRoles = { 
+      ...userToUpdate.roles, 
+      media_confirmed: true 
+    }
+    
+    const { data: updatedUser, error: updateError } = await supabase
+      .from('user_profiles')
+      .update({ roles: updatedRoles })
+      .eq('id', userToUpdate.id)
+      .select('*')
+      .single()
+    
+    if (updateError || !updatedUser) {
+      throw new Error("Error updating user roles")
+    }
+    
+    return updatedUser as UserProfile
+  } catch (error: any) {
+    console.error("Error confirming media user:", error)
+    throw new Error(error.message || "Error confirming media user")
   }
 }
 
+/**
+ * Get users by role
+ */
+export async function getUsersByRole(role: string): Promise<UserProfile[]> {
+  try {
+    const supabase = createServerComponentClient({ cookies })
+    
+    // Check if the current user is taskmasterpeace or an admin
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error("You must be logged in to view users by role")
+    
+    const { data: currentProfile, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('email, roles')
+      .eq('id', user.id)
+      .single()
+    
+    if (profileError || !currentProfile) {
+      throw new Error("Error fetching your profile")
+    }
+    
+    const isTaskmasterpeace = currentProfile.email?.toLowerCase() === "taskmasterpeace@gmail.com"
+    const isAdmin = currentProfile.roles?.admin === true
+    
+    if (!isTaskmasterpeace && !isAdmin) {
+      throw new Error("Only taskmasterpeace and admins can view users by role")
+    }
+    
+    let query = supabase
+      .from('user_profiles')
+      .select('*')
+    
+    // Filter based on the requested role
+    if (role === 'admin') {
+      query = query.filter('roles->admin', 'eq', true)
+    } else if (role === 'community_manager') {
+      query = query.filter('roles->community_manager', 'eq', true)
+    } else if (role === 'media') {
+      query = query.filter('roles->media', 'eq', true)
+    }
+    
+    const { data, error } = await query
+    
+    if (error) {
+      throw new Error("Error fetching users by role")
+    }
+    
+    return data as UserProfile[] || []
+  } catch (error: any) {
+    console.error("Error getting users by role:", error)
+    throw new Error(error.message || "Error getting users by role")
+  }
+}
+
+/**
+ * Add a user as an admin
+ */
+export async function addAdmin(email: string): Promise<UserProfile> {
+  try {
+    const supabase = createServerComponentClient({ cookies })
+    
+    // Check if the current user is taskmasterpeace
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error("You must be logged in to add an admin")
+    
+    const { data: currentProfile, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('email, roles')
+      .eq('id', user.id)
+      .single()
+    
+    if (profileError || !currentProfile) {
+      throw new Error("Error fetching your profile")
+    }
+    
+    const isTaskmasterpeace = currentProfile.email?.toLowerCase() === "taskmasterpeace@gmail.com"
+    
+    if (!isTaskmasterpeace) {
+      throw new Error("Only taskmasterpeace can add admins")
+    }
+    
+    // Find the user to update
+    const { data: userToUpdate, error: findError } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .ilike('email', email)
+      .single()
+    
+    if (findError || !userToUpdate) {
+      throw new Error("User not found with this email")
+    }
+    
+    // Update the user's roles
+    const updatedRoles = { 
+      ...userToUpdate.roles, 
+      admin: true 
+    }
+    
+    const { data: updatedUser, error: updateError } = await supabase
+      .from('user_profiles')
+      .update({ roles: updatedRoles })
+      .eq('id', userToUpdate.id)
+      .select('*')
+      .single()
+    
+    if (updateError || !updatedUser) {
+      throw new Error("Error updating user roles")
+    }
+    
+    return updatedUser as UserProfile
+  } catch (error: any) {
+    console.error("Error adding admin:", error)
+    throw new Error(error.message || "Error adding admin")
+  }
+}
+
+/**
+ * Remove a user's admin role
+ */
+export async function removeAdmin(userId: string): Promise<void> {
+  try {
+    const supabase = createServerComponentClient({ cookies })
+    
+    // Check if the current user is taskmasterpeace
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error("You must be logged in to remove an admin")
+    
+    const { data: currentProfile, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('email, roles')
+      .eq('id', user.id)
+      .single()
+    
+    if (profileError || !currentProfile) {
+      throw new Error("Error fetching your profile")
+    }
+    
+    const isTaskmasterpeace = currentProfile.email?.toLowerCase() === "taskmasterpeace@gmail.com"
+    
+    if (!isTaskmasterpeace) {
+      throw new Error("Only taskmasterpeace can remove admins")
+    }
+    
+    // Find the user to update
+    const { data: userToUpdate, error: findError } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('id', userId)
+      .single()
+    
+    if (findError || !userToUpdate) {
+      throw new Error("User not found")
+    }
+    
+    // Can't remove taskmasterpeace as an admin
+    if (userToUpdate.email?.toLowerCase() === "taskmasterpeace@gmail.com") {
+      throw new Error("Cannot remove taskmasterpeace's admin role")
+    }
+    
+    // Update the user's roles
+    const updatedRoles = { 
+      ...userToUpdate.roles, 
+      admin: false 
+    }
+    
+    const { error: updateError } = await supabase
+      .from('user_profiles')
+      .update({ roles: updatedRoles })
+      .eq('id', userId)
+    
+    if (updateError) {
+      throw new Error("Error updating user roles")
+    }
+  } catch (error: any) {
+    console.error("Error removing admin:", error)
+    throw new Error(error.message || "Error removing admin")
+  }
+}

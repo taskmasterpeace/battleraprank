@@ -1,8 +1,10 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { getBattlers, getAllBadges, getAttributes } from "@/lib/data-service"
-import { Users, Tag, BarChart, TrendingUp } from "lucide-react"
+import { Users, Tag, BarChart, TrendingUp, UserPlus, Settings, ShieldCheck } from "lucide-react"
+import Link from "next/link"
 import MockDataManager from "@/components/admin/MockDataManager"
 import QuickActionToolbar from "@/components/admin/QuickActionToolbar"
+import { Button } from "@/components/ui/button"
 
 export default async function AdminDashboard() {
   const [battlers, badges, attributes] = await Promise.all([getBattlers(), getAllBadges(), getAttributes()])
@@ -67,7 +69,54 @@ export default async function AdminDashboard() {
         <MockDataManager />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Admin Management Tools */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <UserPlus className="h-5 w-5 text-purple-500" />
+              Battler Management
+            </CardTitle>
+            <CardDescription>
+              Create and manage battler profiles for the platform
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col gap-3">
+              <Link href="/admin/battlers/create" passHref prefetch={true}>
+                <Button className="w-full justify-start">
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  Create New Battler
+                </Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ShieldCheck className="h-5 w-5 text-blue-500" />
+              User Management
+            </CardTitle>
+            <CardDescription>
+              Manage roles and permissions for community managers
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col gap-3">
+              <Link href="/admin/managers" passHref prefetch={true}>
+                <Button className="w-full justify-start">
+                  <Settings className="mr-2 h-4 w-4" />
+                  Manage Community Managers
+                </Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-10">
         <Card>
           <CardHeader>
             <CardTitle>Recent Battlers</CardTitle>
@@ -148,4 +197,3 @@ export default async function AdminDashboard() {
     </div>
   )
 }
-

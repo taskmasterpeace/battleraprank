@@ -25,23 +25,26 @@ export default function BadgeSection({ title, badges, isPositive, selectedBadges
   const getColorScheme = (isSelected: boolean) => {
     if (isPositive) {
       return isSelected
-        ? "bg-green-600/30 text-green-300 border-green-500 shadow-md shadow-green-900/30"
+        ? "bg-green-100 text-green-800 border-green-500 shadow-md shadow-green-900/30"
         : "bg-gray-800 text-gray-300 border-gray-700 hover:bg-green-900/20 hover:border-green-700"
     } else {
       return isSelected
-        ? "bg-red-600/30 text-red-300 border-red-500 shadow-md shadow-red-900/30"
+        ? "bg-red-100 text-red-800 border-red-500 shadow-md shadow-red-900/30"
         : "bg-gray-800 text-gray-300 border-gray-700 hover:bg-red-900/20 hover:border-red-700"
     }
   }
 
   return (
-    <div>
-      <h3 className={`text-lg font-semibold mb-4 flex items-center ${isPositive ? "text-green-500" : "text-red-500"}`}>
+    <div data-testid="badge-section">
+      <h3 
+        className={`text-lg font-semibold mb-4 flex items-center ${isPositive ? "text-green-500" : "text-red-500"}`}
+        data-testid={`badge-section-title-${isPositive ? 'positive' : 'negative'}`}
+      >
         {isPositive ? <CheckCircle className="w-5 h-5 mr-2" /> : <XCircle className="w-5 h-5 mr-2" />}
         {title}
       </h3>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3" data-testid="badge-grid">
         {badges.map((badgeItem) => {
           const isSelected = selectedBadges.includes(badgeItem.badge)
           const isHovered = hoveredBadge === badgeItem.badge
@@ -51,6 +54,10 @@ export default function BadgeSection({ title, badges, isPositive, selectedBadges
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div
+                    data-testid={`badge-item-${badgeItem.badge.replace(/\s+/g, '-').toLowerCase()}`}
+                    data-badge-name={badgeItem.badge}
+                    data-selected={isSelected}
+                    data-positive={isPositive}
                     className={`
                       relative cursor-pointer p-4 rounded-lg border-2 transition-all duration-300 h-full
                       transform hover:scale-105 active:scale-95
@@ -61,7 +68,7 @@ export default function BadgeSection({ title, badges, isPositive, selectedBadges
                     onMouseLeave={() => setHoveredBadge(null)}
                   >
                     <div className="flex flex-col items-center text-center">
-                      <span className="text-base font-medium mb-2">{badgeItem.badge}</span>
+                      <span className="text-base font-medium mb-2" data-testid={`badge-text-${badgeItem.badge.replace(/\s+/g, '-').toLowerCase()}`}>{badgeItem.badge}</span>
 
                       {/* Show a preview of description on hover */}
                       {isHovered && <p className="text-xs text-gray-400 line-clamp-2">{badgeItem.description}</p>}
@@ -71,6 +78,7 @@ export default function BadgeSection({ title, badges, isPositive, selectedBadges
                         <div
                           className={`absolute -top-2 -right-2 rounded-full p-1 
                             ${isPositive ? "bg-green-500" : "bg-red-500"}`}
+                          data-testid={`badge-selected-indicator-${badgeItem.badge.replace(/\s+/g, '-').toLowerCase()}`}
                         >
                           {isPositive ? (
                             <CheckCircle className="w-4 h-4 text-white" />
@@ -93,4 +101,3 @@ export default function BadgeSection({ title, badges, isPositive, selectedBadges
     </div>
   )
 }
-

@@ -1,7 +1,7 @@
 "use server"
 
-import { cache } from "react"
-import { supabase } from "@/lib/supabase"
+import { createServerComponentClient } from "@supabase/auth-helpers-nextjs"
+import { cookies } from "next/headers"
 
 // Types for our data
 export interface Badge {
@@ -20,8 +20,8 @@ export interface Battler {
   tags: string[]
   totalPoints: number
   createdAt: Date
-  addedBy?: string // ID of the user who added this battler
-  addedAt?: string // When the battler was added
+  addedBy?: string
+  addedAt?: string
 }
 
 export interface Attribute {
@@ -30,277 +30,343 @@ export interface Attribute {
   description: string
 }
 
-// Mock data for battlers
-const battlersMock: Battler[] = [
-  {
-    id: "1",
-    name: "Loaded Lux",
-    location: "Harlem, NY",
-    image: "/placeholder.svg?height=400&width=400",
-    banner: "/placeholder.svg?height=200&width=1200",
-    tags: ["URL", "Veteran", "Lyricist"],
-    totalPoints: 8.7,
-    createdAt: new Date("2023-01-15"),
-  },
-  {
-    id: "2",
-    name: "Tsu Surf",
-    location: "Newark, NJ",
-    image: "/placeholder.svg?height=400&width=400",
-    banner: "/placeholder.svg?height=200&width=1200",
-    tags: ["URL", "Puncher"],
-    totalPoints: 8.5,
-    createdAt: new Date("2023-02-10"),
-  },
-  {
-    id: "3",
-    name: "Geechi Gotti",
-    location: "Compton, CA",
-    image: "/placeholder.svg?height=400&width=400",
-    banner: "/placeholder.svg?height=200&width=1200",
-    tags: ["URL", "Performance"],
-    totalPoints: 8.9,
-    createdAt: new Date("2023-03-05"),
-  },
-  {
-    id: "4",
-    name: "Rum Nitty",
-    location: "Phoenix, AZ",
-    image: "/placeholder.svg?height=400&width=400",
-    banner: "/placeholder.svg?height=200&width=1200",
-    tags: ["URL", "Puncher"],
-    totalPoints: 9.0,
-    createdAt: new Date("2023-04-20"),
-  },
-  {
-    id: "5",
-    name: "JC",
-    location: "Pontiac, MI",
-    image: "/placeholder.svg?height=400&width=400",
-    banner: "/placeholder.svg?height=200&width=1200",
-    tags: ["URL", "Lyricist"],
-    totalPoints: 8.5,
-    createdAt: new Date("2023-05-15"),
-  },
-  {
-    id: "6",
-    name: "K-Shine",
-    location: "Harlem, NY",
-    image: "/placeholder.svg?height=400&width=400",
-    banner: "/placeholder.svg?height=200&width=1200",
-    tags: ["URL", "Performance"],
-    totalPoints: 8.3,
-    createdAt: new Date("2023-06-10"),
-  },
-]
+// Memoize function to replace React cache
+const memoizedFunctions: Record<string, { result: any, expiry: number }> = {};
 
-// Attributes data
-const attributesMock: Attribute[] = [
-  { category: "Writing", attribute: "Wordplay", description: "Clever manipulation of language and double entendres" },
-  { category: "Writing", attribute: "Punchlines", description: "Impactful lines designed to get reactions" },
-  { category: "Writing", attribute: "Schemes", description: "Extended metaphors and thematic writing" },
-  {
-    category: "Writing",
-    attribute: "Angles",
-    description: "Unique perspectives and approaches to attacking opponents",
-  },
-  { category: "Performance", attribute: "Delivery", description: "Clarity, timing, and emphasis in speech" },
-  { category: "Performance", attribute: "Stage Presence", description: "Commanding attention and energy on stage" },
-  {
-    category: "Performance",
-    attribute: "Crowd Control",
-    description: "Ability to engage and manipulate audience reactions",
-  },
-  { category: "Performance", attribute: "Showmanship", description: "Entertainment value and performance artistry" },
-  { category: "Personal", attribute: "Authenticity", description: "Genuineness and believability of content" },
-  { category: "Personal", attribute: "Battle IQ", description: "Strategic approach and in-battle adaptability" },
-  { category: "Personal", attribute: "Preparation", description: "Research and battle-specific content" },
-  { category: "Personal", attribute: "Consistency", description: "Reliability of performance quality across battles" },
-]
-
-// Function to fetch and parse CSV data
-async function fetchCSV(url: string): Promise<string> {
-  const response = await fetch(url)
-  if (!response.ok) {
-    throw new Error(`Failed to fetch CSV: ${response.statusText}`)
-  }
-  return response.text()
-}
-
-// Parse CSV string to array of objects
-function parseCSV(csv: string): any[] {
-  const lines = csv.split("\n")
-  const headers = lines[0].split(",").map((header) => header.trim())
-
-  return lines
-    .slice(1)
-    .filter((line) => line.trim())
-    .map((line) => {
-      const values = line.split(",").map((value) => value.trim())
-      return headers.reduce((obj, header, index) => {
-        obj[header] = values[index]
-        return obj
-      }, {} as any)
-    })
+export function memoize<T>(fn: () => Promise<T>, key: string, expiryMs = 60000): () => Promise<T> {
+  return async () => {
+    const now = Date.now();
+    const cached = memoizedFunctions[key];
+    
+    if (cached && cached.expiry > now) {
+      return cached.result;
+    }
+    
+    const result = await fn();
+    memoizedFunctions[key] = { result, expiry: now + expiryMs };
+    return result;
+  };
 }
 
 // Fetch writing badges
-export const getWritingBadges = cache(async (): Promise<Badge[]> => {
+export async function getWritingBadges(): Promise<Badge[]> {
   try {
-    const csvData = await fetchCSV(
-      "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Battle%20Rap%20Experience%20-%20Writing%20Badges-vUFDh3l4W5OHdguZK6goGs87sBWGUR.csv",
-    )
-    const parsedData = parseCSV(csvData)
-
-    return parsedData.map((item) => ({
-      category: item.Category,
-      badge: item.Badge,
-      description: item.Description,
-      isPositive: !item.Category.toLowerCase().includes("neg"),
-    }))
+    const supabase = createServerComponentClient({ cookies })
+    
+    const { data, error } = await supabase
+      .from('badges')
+      .select('*')
+      .eq('category', 'Writing')
+    
+    if (error) {
+      console.error("Error fetching writing badges:", error)
+      return []
+    }
+    
+    return data as Badge[]
   } catch (error) {
     console.error("Error fetching writing badges:", error)
     return []
   }
-})
+}
 
 // Fetch performance badges
-export const getPerformanceBadges = cache(async (): Promise<Badge[]> => {
+export async function getPerformanceBadges(): Promise<Badge[]> {
   try {
-    const csvData = await fetchCSV(
-      "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Battle%20Rap%20Experience%20-%20Performance%20Badges-KJkxHybeS2XuSZAr4OBK316eqZ6xU4.csv",
-    )
-    const parsedData = parseCSV(csvData)
-
-    return parsedData.map((item) => ({
-      category: item.Category,
-      badge: item.Badge,
-      description: item.Description,
-      isPositive: !item.Category.toLowerCase().includes("neg"),
-    }))
+    const supabase = createServerComponentClient({ cookies })
+    
+    const { data, error } = await supabase
+      .from('badges')
+      .select('*')
+      .eq('category', 'Performance')
+    
+    if (error) {
+      console.error("Error fetching performance badges:", error)
+      return []
+    }
+    
+    return data as Badge[]
   } catch (error) {
     console.error("Error fetching performance badges:", error)
     return []
   }
-})
+}
 
 // Fetch personal reputation badges
-export const getPersonalBadges = cache(async (): Promise<Badge[]> => {
+export async function getPersonalBadges(): Promise<Badge[]> {
   try {
-    const csvData = await fetchCSV(
-      "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Battle%20Rap%20Experience%20-%20Personal%20Reputation%20Badges-VjjEGsuC5VoIROqg55XrDIMnVGqgHU.csv",
-    )
-    const parsedData = parseCSV(csvData)
-
-    return parsedData.map((item) => ({
-      category: item.Category,
-      badge: item.Badge,
-      description: item.Description,
-      isPositive: !item.Category.toLowerCase().includes("neg"),
-    }))
+    const supabase = createServerComponentClient({ cookies })
+    
+    const { data, error } = await supabase
+      .from('badges')
+      .select('*')
+      .eq('category', 'Personal')
+    
+    if (error) {
+      console.error("Error fetching personal badges:", error)
+      return []
+    }
+    
+    return data as Badge[]
   } catch (error) {
     console.error("Error fetching personal badges:", error)
     return []
   }
-})
+}
 
 // Get all badges
-export const getAllBadges = cache(async (): Promise<Badge[]> => {
-  const [writing, performance, personal] = await Promise.all([
-    getWritingBadges(),
-    getPerformanceBadges(),
-    getPersonalBadges(),
-  ])
-
-  return [...writing, ...performance, ...personal]
-})
+export async function getAllBadges(): Promise<Badge[]> {
+  try {
+    const supabase = createServerComponentClient({ cookies })
+    
+    const { data, error } = await supabase
+      .from('badges')
+      .select('*')
+    
+    if (error) {
+      console.error("Error fetching all badges:", error)
+      return []
+    }
+    
+    return data as Badge[]
+  } catch (error) {
+    console.error("Error fetching all badges:", error)
+    return []
+  }
+}
 
 // Get battlers
-export const getBattlers = cache(async (): Promise<Battler[]> => {
-  // In a real app, this would fetch from a database
-  return battlersMock
-})
+export async function getBattlers(): Promise<Battler[]> {
+  try {
+    const supabase = createServerComponentClient({ cookies })
+    
+    const { data, error } = await supabase
+      .from('battlers')
+      .select('*')
+    
+    if (error) {
+      console.error("Error fetching battlers:", error)
+      return []
+    }
+    
+    return data.map(battler => ({
+      ...battler,
+      createdAt: new Date(battler.createdAt)
+    })) as Battler[]
+  } catch (error) {
+    console.error("Error fetching battlers:", error)
+    return []
+  }
+}
 
 // Get a single battler by ID
-export const getBattlerById = cache(async (id: string): Promise<Battler | null> => {
-  // In a real app, this would fetch from a database
-  const battler = battlersMock.find((b) => b.id === id)
-  return battler || null
-})
+export async function getBattlerById(id: string): Promise<Battler | null> {
+  try {
+    const supabase = createServerComponentClient({ cookies })
+    
+    const { data, error } = await supabase
+      .from('battlers')
+      .select('*')
+      .eq('id', id)
+      .single()
+    
+    if (error || !data) {
+      console.error("Error fetching battler by ID:", error)
+      return null
+    }
+    
+    return {
+      ...data,
+      createdAt: new Date(data.createdAt)
+    } as Battler
+  } catch (error) {
+    console.error("Error fetching battler by ID:", error)
+    return null
+  }
+}
 
 // Get attributes
-export const getAttributes = cache(async (): Promise<Attribute[]> => {
-  // In a real app, this would fetch from a database
-  return attributesMock
-})
+export async function getAttributes(): Promise<Attribute[]> {
+  try {
+    const supabase = createServerComponentClient({ cookies })
+    
+    const { data, error } = await supabase
+      .from('attributes')
+      .select('*')
+    
+    if (error) {
+      console.error("Error fetching attributes:", error)
+      return []
+    }
+    
+    return data as Attribute[]
+  } catch (error) {
+    console.error("Error fetching attributes:", error)
+    return []
+  }
+}
 
 // Get attributes by category
-export const getAttributesByCategory = cache(async (category: string): Promise<Attribute[]> => {
-  const attributes = await getAttributes()
-  return attributes.filter((attr) => attr.category === category)
-})
+export async function getAttributesByCategory(category: string): Promise<Attribute[]> {
+  try {
+    const supabase = createServerComponentClient({ cookies })
+    
+    const { data, error } = await supabase
+      .from('attributes')
+      .select('*')
+      .eq('category', category)
+    
+    if (error) {
+      console.error(`Error fetching attributes for category ${category}:`, error)
+      return []
+    }
+    
+    return data as Attribute[]
+  } catch (error) {
+    console.error(`Error fetching attributes for category ${category}:`, error)
+    return []
+  }
+}
 
-// Admin functions (would connect to a database in a real app)
-
+// Admin functions
 export async function createBattler(battler: Omit<Battler, "id" | "createdAt">): Promise<Battler> {
-  // In a real app, this would insert into a database
-  const newBattler: Battler = {
-    ...battler,
-    id: (battlersMock.length + 1).toString(),
-    createdAt: new Date(),
-  }
-
-  battlersMock.push(newBattler)
-  return newBattler
-}
-
-export async function updateBattler(id: string, battler: Partial<Battler>): Promise<Battler | null> {
-  // In a real app, this would update a database record
-  const index = battlersMock.findIndex((b) => b.id === id)
-  if (index === -1) return null
-
-  battlersMock[index] = { ...battlersMock[index], ...battler }
-  return battlersMock[index]
-}
-
-export async function deleteBattler(id: string): Promise<boolean> {
-  // In a real app, this would delete from a database
-  const index = battlersMock.findIndex((b) => b.id === id)
-  if (index === -1) return false
-
-  battlersMock.splice(index, 1)
-  return true
-}
-
-// Get user by username
-export const getUserByUsername = cache(async (username: string): Promise<any | null> => {
-  // In a real app, this would fetch from a database
-  return null
-})
-
-export async function updateUserAddedBattler(userId: string, battleId: string): Promise<void> {
-  // In a real app, this would update the user's addedBattlers array
-  const { data: user, error: userError } = await supabase
-    .from("user_profiles")
-    .select("addedBattlers")
-    .eq("id", userId)
-    .single()
-
-  if (userError) {
-    console.error("Error fetching user:", userError)
-    throw userError
-  }
-
-  const addedBattlers = user?.addedBattlers || []
-
-  const { error } = await supabase
-    .from("user_profiles")
-    .update({ addedBattlers: [...addedBattlers, battleId] })
-    .eq("id", userId)
-
-  if (error) {
-    console.error("Error updating user's addedBattlers:", error)
+  try {
+    const supabase = createServerComponentClient({ cookies })
+    
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user) {
+      throw new Error("You must be logged in to create a battler")
+    }
+    
+    const newBattler = {
+      ...battler,
+      createdAt: new Date().toISOString(),
+      addedBy: user.id,
+      addedAt: new Date().toISOString()
+    }
+    
+    const { data, error } = await supabase
+      .from('battlers')
+      .insert(newBattler)
+      .select()
+      .single()
+    
+    if (error) {
+      console.error("Error creating battler:", error)
+      throw new Error("Failed to create battler")
+    }
+    
+    return {
+      ...data,
+      createdAt: new Date(data.createdAt)
+    } as Battler
+  } catch (error) {
+    console.error("Error creating battler:", error)
     throw error
   }
 }
 
+export async function updateBattler(id: string, battler: Partial<Battler>): Promise<Battler | null> {
+  try {
+    const supabase = createServerComponentClient({ cookies })
+    
+    const { data, error } = await supabase
+      .from('battlers')
+      .update(battler)
+      .eq('id', id)
+      .select()
+      .single()
+    
+    if (error) {
+      console.error("Error updating battler:", error)
+      return null
+    }
+    
+    return {
+      ...data,
+      createdAt: new Date(data.createdAt)
+    } as Battler
+  } catch (error) {
+    console.error("Error updating battler:", error)
+    return null
+  }
+}
+
+export async function deleteBattler(id: string): Promise<boolean> {
+  try {
+    const supabase = createServerComponentClient({ cookies })
+    
+    const { error } = await supabase
+      .from('battlers')
+      .delete()
+      .eq('id', id)
+    
+    if (error) {
+      console.error("Error deleting battler:", error)
+      return false
+    }
+    
+    return true
+  } catch (error) {
+    console.error("Error deleting battler:", error)
+    return false
+  }
+}
+
+// Get user by username
+export async function getUserByUsername(username: string): Promise<any | null> {
+  try {
+    const supabase = createServerComponentClient({ cookies })
+    
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('username', username)
+      .single()
+    
+    if (error) {
+      console.error("Error fetching user by username:", error)
+      return null
+    }
+    
+    return data
+  } catch (error) {
+    console.error("Error fetching user by username:", error)
+    return null
+  }
+}
+
+export async function updateUserAddedBattler(userId: string, battleId: string): Promise<void> {
+  try {
+    const supabase = createServerComponentClient({ cookies })
+    
+    // Get current user's added battlers
+    const { data: user, error: fetchError } = await supabase
+      .from('user_profiles')
+      .select('addedBattlers')
+      .eq('id', userId)
+      .single()
+    
+    if (fetchError) {
+      console.error("Error fetching user's added battlers:", fetchError)
+      throw new Error("Failed to update user's added battlers")
+    }
+    
+    const addedBattlers = user?.addedBattlers || []
+    
+    // Update user's added battlers
+    const { error: updateError } = await supabase
+      .from('user_profiles')
+      .update({ addedBattlers: [...addedBattlers, battleId] })
+      .eq('id', userId)
+    
+    if (updateError) {
+      console.error("Error updating user's added battlers:", updateError)
+      throw new Error("Failed to update user's added battlers")
+    }
+  } catch (error) {
+    console.error("Error updating user's added battlers:", error)
+    throw error
+  }
+}

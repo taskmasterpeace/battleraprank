@@ -98,18 +98,27 @@ function RoleCard({
   requiresVerification,
   badge,
 }: RoleCardProps) {
+  // Create a handler function for the card click to prevent multiple onChange calls
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Prevent calling onChange if the click was on the checkbox (which has its own handler)
+    if (!(e.target instanceof HTMLInputElement)) {
+      onChange();
+    }
+  };
+  
   return (
     <Card
       className={`border ${checked ? `border-${color}-500 bg-${color}-900/20` : "border-gray-800"} 
         hover:border-${color}-500/70 transition-colors cursor-pointer`}
-      onClick={onChange}
+      onClick={handleCardClick}
     >
       <CardContent className="p-4">
         <div className="flex items-start space-x-3">
           <Checkbox
             id={`role-${title.toLowerCase()}`}
             checked={checked}
-            onCheckedChange={onChange}
+            // Don't use the onCheckedChange handler as it's causing the infinite loop
+            // The card click will handle the role change
             className={`mt-1 data-[state=checked]:bg-${color}-500 data-[state=checked]:border-${color}-500`}
           />
           <div className="flex-1">
@@ -150,4 +159,3 @@ function RoleCard({
     </Card>
   )
 }
-

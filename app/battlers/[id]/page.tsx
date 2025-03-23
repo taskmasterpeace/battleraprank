@@ -1,131 +1,145 @@
-"use client"
-
-import { useState } from "react"
 import Image from "next/image"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import Link from "next/link"
 import { MapPin } from "lucide-react"
 import AttributesTab from "@/components/battler/AttributesTab"
 import AnalyticsTab from "@/components/battler/AnalyticsTab"
 import { Badge } from "@/components/ui/badge"
-import { CheckCircle, XCircle } from "lucide-react"
+import { CheckCircle, XCircle, AlertTriangle } from "lucide-react"
+import { supabase } from "@/lib/supabase"
+import ClientBattlerDetails from "@/components/battler/ClientBattlerDetails"
 
-// Mock data for a battler
-const battlerData = {
-  id: 1,
-  name: "Loaded Lux",
-  location: "Harlem, NY",
-  image: "/placeholder.svg?height=400&width=400",
-  banner: "/placeholder.svg?height=200&width=1200",
-  tags: ["URL", "Veteran", "Lyricist"],
-  totalPoints: 8.7,
+// Type for battler data
+interface Battler {
+  id: string
+  name: string
+  alias?: string
+  bio?: string
+  avatar_url?: string
+  social_links?: any
+  stats?: any
+  created_at?: string
+  updated_at?: string
 }
 
-export default function BattlerPage({ params }: { params: { id: string } }) {
-  const [selectedBadges, setSelectedBadges] = useState<{
-    positive: string[]
-    negative: string[]
-  }>({
-    positive: [],
-    negative: [],
-  })
-
-  const [totalPoints, setTotalPoints] = useState(battlerData.totalPoints)
-
-  // Function to update badges (will be passed to AttributesTab)
-  const updateBadges = (badges: { positive: string[]; negative: string[] }) => {
-    setSelectedBadges(badges)
+// Fetch battler data directly in server component
+async function getBattler(id: string): Promise<Battler | null> {
+  try {
+    const { data, error } = await supabase
+      .from("battlers")
+      .select("*")
+      .eq("id", id)
+      .single();
+    
+    if (error) {
+      console.error("Error fetching battler:", error);
+      return null;
+    }
+    
+    return data;
+  } catch (error) {
+    console.error("Exception fetching battler:", error);
+    return null;
   }
+}
 
-  // Function to update total points (will be passed to AttributesTab)
-  const updateTotalPoints = (points: number) => {
-    setTotalPoints(points)
+export default async function BattlerPage({ params }: { params: { id: string } }) {
+  const battler = await getBattler(params.id);
+  
+  if (!battler) {
+    return (
+      <div className="container py-8 mx-auto text-center">
+        <h1 className="text-3xl font-bold text-red-500">Error</h1>
+        <p className="mt-4 text-gray-400">Battler not found or there was an error loading the data.</p>
+        <div className="mt-6">
+          <Link href="/battlers" className="text-primary hover:underline">
+            Return to all battlers
+          </Link>
+        </div>
+      </div>
+    );
   }
-
+  
   return (
-    <div>
-      {/* Banner */}
-      <div className="w-full h-48 relative">
+    <div className="min-h-screen">
+      {/* Banner Image */}
+      <div className="w-full h-[200px] relative">
         <Image
-          src={battlerData.banner || "/placeholder.svg"}
-          alt={`${battlerData.name} banner`}
+          src="/placeholder.svg?height=200&width=1200"
+          alt="Banner"
           fill
           className="object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-gray-950 to-transparent"></div>
       </div>
 
+      {/* Profile Section */}
       <div className="container mx-auto px-4 -mt-20 relative z-10">
-        {/* Profile header */}
-        <div className="flex flex-col md:flex-row gap-6 mb-8">
-          <div className="w-32 h-32 md:w-40 md:h-40 rounded-full overflow-hidden border-4 border-gray-900 relative">
-            <Image src={battlerData.image || "/placeholder.svg"} alt={battlerData.name} fill className="object-cover" />
+        <div className="flex flex-col md:flex-row gap-6">
+          {/* Avatar */}
+          <div className="w-32 h-32 md:w-40 md:h-40 rounded-full overflow-hidden border-4 border-background shadow-xl">
+            <Image
+              src={battler.avatar_url || "/placeholder.svg?height=400&width=400"}
+              alt={battler.name}
+              width={160}
+              height={160}
+              className="object-cover w-full h-full"
+            />
           </div>
 
+          {/* Info */}
           <div className="flex-1">
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-              <div>
-                <h1 className="text-3xl font-bold">{battlerData.name}</h1>
-                <p className="text-gray-400 flex items-center mt-1">
-                  <MapPin className="h-4 w-4 mr-1" />
-                  {battlerData.location}
-                </p>
-                <div className="flex flex-wrap gap-1 mt-3">
-                  {battlerData.tags.map((tag) => (
-                    <span key={tag} className="text-xs bg-gray-800 text-gray-300 px-2 py-0.5 rounded">
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              <div className="bg-gray-900 rounded-lg p-4 text-center">
-                <p className="text-sm text-gray-400">Total Rating</p>
-                <p className="text-3xl font-bold text-purple-400">{totalPoints.toFixed(1)}</p>
-              </div>
-            </div>
-
-            {/* Selected badges */}
-            {(selectedBadges.positive.length > 0 || selectedBadges.negative.length > 0) && (
-              <div className="mt-6">
-                <h3 className="text-sm font-medium text-gray-400 mb-3">Selected Badges</h3>
-                <div className="flex flex-wrap gap-3">
-                  {selectedBadges.positive.map((badge) => (
-                    <div key={badge}>
-                      <Badge className="px-3 py-2 text-base bg-green-900/30 text-green-400 border-green-700 hover:bg-green-900/30 flex items-center">
-                        <CheckCircle className="w-4 h-4 mr-2" />
-                        {badge}
-                      </Badge>
-                    </div>
-                  ))}
-                  {selectedBadges.negative.map((badge) => (
-                    <div key={badge}>
-                      <Badge className="px-3 py-2 text-base bg-red-900/30 text-red-400 border-red-700 hover:bg-red-900/30 flex items-center">
-                        <XCircle className="w-4 h-4 mr-2" />
-                        {badge}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
+            <h1 className="text-3xl font-bold">{battler.name}</h1>
+            {battler.alias && (
+              <div className="flex items-center mt-1 text-muted-foreground">
+                <MapPin className="w-4 h-4 mr-1" />
+                <span>{battler.alias}</span>
               </div>
             )}
+
+            {/* Tags */}
+            <div className="flex flex-wrap gap-2 mt-3">
+              {battler.stats && Object.keys(battler.stats).map((tag) => (
+                <Badge key={tag} variant="outline">
+                  {tag}
+                </Badge>
+              ))}
+              {(!battler.stats || Object.keys(battler.stats).length === 0) && (
+                <Badge variant="outline">No Stats Available</Badge>
+              )}
+            </div>
+
+            {/* Overall Rating */}
+            <div className="mt-4 bg-gradient-to-r from-purple-900/50 to-blue-900/50 p-3 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-medium text-gray-400">Overall Rating</h3>
+                  <div className="text-2xl font-bold">
+                    {battler.stats?.rating || "No Rating"}
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div>
+                    <div className="text-sm text-gray-400">Wins</div>
+                    <div className="flex items-center text-green-500">
+                      <CheckCircle className="w-4 h-4 mr-1" />
+                      {battler.stats?.wins || 0}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-gray-400">Losses</div>
+                    <div className="flex items-center text-red-500">
+                      <XCircle className="w-4 h-4 mr-1" />
+                      {battler.stats?.losses || 0}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Tabs */}
-        <Tabs defaultValue="attributes" className="mb-12">
-          <TabsList className="mb-8 bg-gray-900 border border-gray-800">
-            <TabsTrigger value="attributes">Attributes</TabsTrigger>
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
-          </TabsList>
-          <TabsContent value="attributes">
-            <AttributesTab updateBadges={updateBadges} updateTotalPoints={updateTotalPoints} />
-          </TabsContent>
-          <TabsContent value="analytics">
-            <AnalyticsTab battlerId={params.id} />
-          </TabsContent>
-        </Tabs>
+        {/* Send battler data to client-side tabs */}
+        <ClientBattlerDetails battler={battler} />
       </div>
     </div>
-  )
+  );
 }
-

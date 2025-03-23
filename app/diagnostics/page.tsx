@@ -1,4 +1,5 @@
 import ConnectionTester from "@/components/diagnostics/ConnectionTester"
+import ConnectionStatus from "@/components/diagnostics/ConnectionStatus"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 
@@ -10,7 +11,10 @@ export default function DiagnosticsPage() {
         Use this page to diagnose connection issues with the Battle Rap Rating application.
       </p>
 
-      <ConnectionTester />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <ConnectionStatus />
+        <ConnectionTester />
+      </div>
 
       <Card className="w-full max-w-3xl mx-auto mt-8">
         <CardHeader>
@@ -90,4 +94,3 @@ export default function DiagnosticsPage() {
     </div>
   )
 }
-

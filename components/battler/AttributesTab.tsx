@@ -5,13 +5,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import AttributeSlider from "@/components/battler/AttributeSlider"
 import BadgeSection from "@/components/battler/BadgeSection"
 import { getWritingBadges, getPerformanceBadges, getPersonalBadges, getAttributesByCategory } from "@/lib/data-service"
+import { supabase } from "@/lib/supabase"
 
 interface AttributesTabProps {
-  updateBadges: (badges: { positive: string[]; negative: string[] }) => void
-  updateTotalPoints: (points: number) => void
+  battlerId: string
 }
 
-export default function AttributesTab({ updateBadges, updateTotalPoints }: AttributesTabProps) {
+export default function AttributesTab({ battlerId }: AttributesTabProps) {
   // State for all attribute ratings
   const [ratings, setRatings] = useState<Record<string, number>>({})
 
@@ -35,38 +35,40 @@ export default function AttributesTab({ updateBadges, updateTotalPoints }: Attri
 
   // Fetch badges and attributes
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Fetch badges
-        const writingData = await getWritingBadges()
-        const performanceData = await getPerformanceBadges()
-        const personalData = await getPersonalBadges()
-
-        setWritingBadges(writingData)
-        setPerformanceBadges(performanceData)
-        setPersonalBadges(personalData)
-
-        // Fetch attributes
-        const writingAttrs = await getAttributesByCategory("Writing")
-        const performanceAttrs = await getAttributesByCategory("Performance")
-        const personalAttrs = await getAttributesByCategory("Personal")
-
-        setWritingAttributes(writingAttrs)
-        setPerformanceAttributes(performanceAttrs)
-        setPersonalAttributes(personalAttrs)
-
+    // Create a non-async function to call inside useEffect
+    const fetchData = () => {
+      // Fetch badges
+      Promise.all([
+        getWritingBadges(),
+        getPerformanceBadges(),
+        getPersonalBadges(),
+        getAttributesByCategory("Writing"),
+        getAttributesByCategory("Performance"),
+        getAttributesByCategory("Personal")
+      ])
+      .then(([writingData, performanceData, personalData, writingAttrs, performanceAttrs, personalAttrs]) => {
+        setWritingBadges(writingData);
+        setPerformanceBadges(performanceData);
+        setPersonalBadges(personalData);
+        
+        setWritingAttributes(writingAttrs);
+        setPerformanceAttributes(performanceAttrs);
+        setPersonalAttributes(personalAttrs);
+        
         // Initialize ratings
-        const initialRatings: Record<string, number> = {}
-        ;[...writingAttrs, ...performanceAttrs, ...personalAttrs].forEach((attr) => {
-          initialRatings[attr.attribute] = 5.0
-        })
-        setRatings(initialRatings)
-      } catch (error) {
-        console.error("Error fetching data:", error)
-      }
-    }
-
-    fetchData()
+        const initialRatings: Record<string, number> = {};
+        [...writingAttrs, ...performanceAttrs, ...personalAttrs].forEach((attr) => {
+          initialRatings[attr.attribute] = 5.0;
+        });
+        
+        setRatings(initialRatings);
+      })
+      .catch(error => {
+        console.error("Error fetching badges and attributes:", error);
+      });
+    };
+    
+    fetchData();
   }, [])
 
   // Calculate total points whenever ratings change
@@ -78,13 +80,13 @@ export default function AttributesTab({ updateBadges, updateTotalPoints }: Attri
     const average = total / Object.values(ratings).length
 
     // Update parent component
-    updateTotalPoints(average)
-  }, [ratings, updateTotalPoints])
+    // updateTotalPoints(average)
+  }, [ratings])
 
   // Update badges in parent component when selected badges change
   useEffect(() => {
-    updateBadges(selectedBadges)
-  }, [selectedBadges, updateBadges])
+    // updateBadges(selectedBadges)
+  }, [selectedBadges])
 
   // Handle rating change
   const handleRatingChange = (attribute: string, value: number) => {
@@ -262,4 +264,3 @@ export default function AttributesTab({ updateBadges, updateTotalPoints }: Attri
     </div>
   )
 }
-

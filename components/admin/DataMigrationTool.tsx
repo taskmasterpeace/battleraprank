@@ -39,6 +39,8 @@ export default function DataMigrationTool() {
     try {
       await clearMockData(options)
       setSuccess("Mock data cleared successfully!")
+      // Force a page refresh to show updated data
+      window.location.reload()
     } catch (error) {
       console.error("Error clearing mock data:", error)
       setError("Failed to clear mock data. Please try again.")
@@ -282,4 +284,3 @@ export default function DataMigrationTool() {
     </Card>
   )
 }
-

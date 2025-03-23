@@ -5,7 +5,7 @@ import type React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { LayoutDashboard, Users, Tag, Settings, BarChart, Database, Award, Sliders, Shield, Video } from "lucide-react"
+import { LayoutDashboard, Users, Tag, Settings, BarChart, Database, Award, Sliders, Shield, Video, HardDrive, UserCheck, UserPlus } from "lucide-react"
 
 interface SidebarLinkProps {
   href: string
@@ -48,6 +48,12 @@ export default function AdminSidebar() {
           <SidebarLink href="/admin/battlers" icon={<Users className="h-4 w-4" />}>
             Battlers
           </SidebarLink>
+          <SidebarLink href="/admin/battlers/create" icon={<Users className="h-4 w-4 text-green-500" />}>
+            Create Battler
+          </SidebarLink>
+          <SidebarLink href="/admin/data-management" icon={<HardDrive className="h-4 w-4 text-blue-500" />}>
+            Data Management
+          </SidebarLink>
           <SidebarLink href="/admin/badges" icon={<Award className="h-4 w-4" />}>
             Badges
           </SidebarLink>
@@ -60,8 +66,14 @@ export default function AdminSidebar() {
           <SidebarLink href="/admin/role-weights" icon={<Sliders className="h-4 w-4" />}>
             Role Weights
           </SidebarLink>
-          <SidebarLink href="/admin/community-managers" icon={<Shield className="h-4 w-4" />}>
+          <SidebarLink href="/admin/community-managers" icon={<Shield className="h-4 w-4 text-amber-500" />}>
             Community Managers
+          </SidebarLink>
+          <SidebarLink href="/admin/administrators" icon={<UserPlus className="h-4 w-4 text-red-500" />}>
+            Administrators
+          </SidebarLink>
+          <SidebarLink href="/admin/media-users" icon={<UserCheck className="h-4 w-4 text-green-500" />}>
+            Media Users
           </SidebarLink>
           <SidebarLink href="/admin/featured-videos" icon={<Video className="h-4 w-4" />}>
             Featured Videos
@@ -80,4 +92,3 @@ export default function AdminSidebar() {
     </div>
   )
 }
-

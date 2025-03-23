@@ -1,90 +1,144 @@
 "use server"
 
 import type { MediaContent } from "@/types/content-types"
+import { createServerComponentClient } from "@supabase/auth-helpers-nextjs"
+import { cookies } from "next/headers"
 
-// Mock data for media content
-const mediaContent: MediaContent[] = [
-  {
-    id: "1",
-    userId: "1",
-    title: "Loaded Lux vs Geechi Gotti - Who Really Won?",
-    description:
-      "Breaking down the highly anticipated battle between Loaded Lux and Geechi Gotti. Who do you think won?",
-    url: "https://youtube.com/watch?v=example1",
-    type: "video",
-    thumbnail: "/placeholder.svg?height=300&width=600&text=Lux+vs+Geechi",
-    likes: 1245,
-    likedByCurrentUser: false,
-    createdAt: "2023-05-15T00:00:00Z",
-    updatedAt: "2023-05-15T00:00:00Z",
-  },
-  {
-    id: "2",
-    userId: "1",
-    title: "Top 5 Performances of the Month",
-    description: "Ranking the top 5 battle rap performances from the past month. Did your favorite make the list?",
-    url: "https://youtube.com/watch?v=example2",
-    type: "video",
-    thumbnail: "/placeholder.svg?height=300&width=600&text=Top+5+Performances",
-    likes: 987,
-    likedByCurrentUser: false,
-    createdAt: "2023-05-10T00:00:00Z",
-    updatedAt: "2023-05-10T00:00:00Z",
-  },
-  {
-    id: "3",
-    userId: "1",
-    title: "The Evolution of Battle Rap",
-    description: "An in-depth article exploring how battle rap has evolved over the past decade.",
-    url: "https://champion.example.com/evolution-of-battle-rap",
-    type: "article",
-    likes: 543,
-    likedByCurrentUser: false,
-    createdAt: "2023-05-05T00:00:00Z",
-    updatedAt: "2023-05-05T00:00:00Z",
-  },
-]
-
+/**
+ * Get content created by a specific user
+ */
 export async function getUserContent(userId: string): Promise<MediaContent[]> {
-  // In a real app, this would query your database
-  return mediaContent
-    .filter((content) => content.userId === userId)
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-}
-
-export async function addUserContent(userId: string, data: Partial<MediaContent>): Promise<MediaContent> {
-  // In a real app, this would insert into your database
-  const newContent: MediaContent = {
-    id: (mediaContent.length + 1).toString(),
-    userId,
-    title: data.title || "",
-    description: data.description || "",
-    url: data.url || "",
-    type: data.type as "video" | "article" | "podcast",
-    thumbnail: data.thumbnail,
-    likes: 0,
-    likedByCurrentUser: false,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+  try {
+    const supabase = createServerComponentClient({ cookies })
+    
+    const { data, error } = await supabase
+      .from('media_content')
+      .select('*')
+      .eq('userId', userId)
+      .order('createdAt', { ascending: false })
+    
+    if (error) {
+      console.error('Error fetching user content:', error)
+      return []
+    }
+    
+    return data.map(item => ({
+      ...item,
+      likedByCurrentUser: false // This will be updated in a separate query if needed
+    })) as MediaContent[]
+  } catch (error) {
+    console.error('Error fetching user content:', error)
+    return []
   }
-
-  mediaContent.unshift(newContent)
-
-  return newContent
 }
 
+/**
+ * Add new content for a user
+ */
+export async function addUserContent(
+  userId: string, 
+  data: Partial<MediaContent>
+): Promise<MediaContent> {
+  try {
+    const supabase = createServerComponentClient({ cookies })
+    
+    // Verify the current user
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (user?.id !== userId) {
+      throw new Error('Unauthorized: You can only add content for your own account')
+    }
+    
+    const newContent = {
+      userId,
+      title: data.title || '',
+      description: data.description || '',
+      url: data.url || '',
+      type: data.type || 'article',
+      thumbnail: data.thumbnail || '',
+      likes: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+    
+    const { data: insertedContent, error } = await supabase
+      .from('media_content')
+      .insert(newContent)
+      .select()
+      .single()
+    
+    if (error) {
+      console.error('Error adding content:', error)
+      throw new Error('Failed to add content')
+    }
+    
+    return {
+      ...insertedContent,
+      likedByCurrentUser: false
+    } as MediaContent
+  } catch (error) {
+    console.error('Error adding content:', error)
+    throw error
+  }
+}
+
+/**
+ * Like or unlike a piece of content
+ */
 export async function likeContent(contentId: string): Promise<void> {
-  // In a real app, this would update your database
-  const contentIndex = mediaContent.findIndex((c) => c.id === contentId)
-
-  if (contentIndex === -1) {
-    throw new Error("Content not found")
-  }
-
-  mediaContent[contentIndex] = {
-    ...mediaContent[contentIndex],
-    likes: mediaContent[contentIndex].likes + 1,
-    likedByCurrentUser: true,
+  try {
+    const supabase = createServerComponentClient({ cookies })
+    
+    // Get the current user
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user) {
+      throw new Error('You must be logged in to like content')
+    }
+    
+    // Check if already liked
+    const { data: existingLike, error: checkError } = await supabase
+      .from('content_likes')
+      .select()
+      .eq('contentId', contentId)
+      .eq('userId', user.id)
+      .single()
+    
+    if (!existingLike) {
+      // Add like
+      const { error: insertError } = await supabase
+        .from('content_likes')
+        .insert({
+          contentId,
+          userId: user.id,
+          createdAt: new Date().toISOString()
+        })
+        
+      if (insertError) {
+        console.error('Error liking content:', insertError)
+        throw new Error('Failed to like content')
+      }
+      
+      // Increment likes count
+      await supabase.rpc('increment_content_likes', { content_id: contentId })
+    } else {
+      // Remove like
+      const { error: deleteError } = await supabase
+        .from('content_likes')
+        .delete()
+        .eq('contentId', contentId)
+        .eq('userId', user.id)
+        
+      if (deleteError) {
+        console.error('Error unliking content:', deleteError)
+        throw new Error('Failed to unlike content')
+      }
+      
+      // Decrement likes count
+      await supabase.rpc('decrement_content_likes', { content_id: contentId })
+    }
+  } catch (error) {
+    console.error('Error toggling content like:', error)
+    throw error
   }
 }
-

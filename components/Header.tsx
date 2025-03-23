@@ -49,6 +49,7 @@ export default function Header() {
           <nav className="hidden md:flex gap-6">
             <Link
               href="/"
+              prefetch={true}
               className={`text-sm font-medium transition-colors hover:text-blue-400 ${
                 pathname === "/" ? "text-blue-400" : "text-gray-300"
               }`}
@@ -57,6 +58,7 @@ export default function Header() {
             </Link>
             <Link
               href="/battlers"
+              prefetch={true}
               className={`text-sm font-medium transition-colors hover:text-blue-400 ${
                 pathname.includes("/battlers") ? "text-blue-400" : "text-gray-300"
               }`}
@@ -65,6 +67,7 @@ export default function Header() {
             </Link>
             <Link
               href="/analytics"
+              prefetch={true}
               className={`text-sm font-medium transition-colors hover:text-blue-400 ${
                 pathname.includes("/analytics") ? "text-blue-400" : "text-gray-300"
               }`}
@@ -73,6 +76,7 @@ export default function Header() {
             </Link>
             <Link
               href="/leaderboard"
+              prefetch={true}
               className={`text-sm font-medium transition-colors hover:text-amber-400 ${
                 pathname.includes("/leaderboard") ? "text-amber-400" : "text-gray-300"
               }`}
@@ -145,4 +149,3 @@ export default function Header() {
     </header>
   )
 }
-

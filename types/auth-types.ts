@@ -1,4 +1,12 @@
-export type UserRole = "fan" | "media" | "battler" | "league_owner" | "admin" | "community_manager"
+export interface UserRoles {
+  fan: boolean
+  media: boolean
+  battler: boolean
+  league_owner: boolean
+  admin: boolean
+  community_manager: boolean
+  media_confirmed: boolean
+}export type UserRole = "fan" | "media" | "battler" | "league_owner" | "admin" | "community_manager"
 
 export interface RoleWeight {
   role: UserRole
@@ -15,6 +23,7 @@ export interface UserRoles {
   league_owner: boolean
   admin: boolean
   community_manager: boolean
+  media_confirmed?: boolean 
 }
 
 export interface SocialLinks {
@@ -27,23 +36,25 @@ export interface SocialLinks {
 export interface UserProfile {
   id: string
   email: string
-  displayName: string
-  username: string
+  displayName?: string
+  username?: string
+  full_name?: string 
   roles: UserRoles
-  verified: boolean
-  createdAt: string
+  verified?: boolean
+  createdAt?: string
+  created_at?: string 
   bio?: string
   location?: string
   website?: string
   profileImage?: string
   bannerImage?: string
-  socialLinks: SocialLinks
-  battlerId?: string // If user is a battler, link to their battler profile
-  leagueId?: string // If user is a league owner, link to their league
-  mediaOutlet?: string // If user is media, their outlet name
+  socialLinks?: SocialLinks
+  battlerId?: string 
+  leagueId?: string 
+  mediaOutlet?: string 
   followers?: number
   following?: number
-  badges?: string[] // Special badges assigned to the user
+  badges?: string[] 
   privacySettings?: {
     visibilityLevel: "low" | "medium" | "high"
     showEmail: boolean
@@ -52,7 +63,7 @@ export interface UserProfile {
     showHistoricalData: boolean
   }
   contentLinks?: ContentLink[]
-  addedBattlers?: string[] // IDs of battlers added by this user
+  addedBattlers?: string[] 
 }
 
 export interface ContentLink {
@@ -66,4 +77,3 @@ export interface ContentLink {
   likes: number
   views?: number
 }
-

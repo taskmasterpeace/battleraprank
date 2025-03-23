@@ -1,13 +1,15 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "@/components/ui/chart"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { AlertCircle, Info } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import type { UserRole, RoleWeight } from "@/types/auth-types"
-import { getMockRoleWeights, getMockTopBattlersByRole } from "@/lib/mock-analytics-service"
+import { getRoleWeights, getTopBattlersByRole } from "@/lib/analytics-service"
 
 interface RoleBasedAnalyticsProps {
   defaultRole?: UserRole
@@ -26,6 +28,7 @@ export default function RoleBasedAnalytics({
   const [topBattlers, setTopBattlers] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [roleWeights, setRoleWeights] = useState<RoleWeight[]>([])
+  const [hasData, setHasData] = useState(false)
 
   // Categories and attributes
   const categories = ["Writing", "Performance", "Personal"]
@@ -35,39 +38,46 @@ export default function RoleBasedAnalytics({
     Personal: ["Authenticity", "Battle IQ", "Preparation", "Consistency"],
   }
 
+  // Load role weights
   useEffect(() => {
-    const fetchRoleWeights = async () => {
+    async function loadRoleWeights() {
       try {
-        // Use client-side mock data instead of server-side fetch
-        const weights = getMockRoleWeights()
+        const weights = await getRoleWeights()
         setRoleWeights(weights)
       } catch (error) {
-        console.error("Error fetching role weights:", error)
-        setRoleWeights([])
+        console.error("Error loading role weights:", error)
       }
     }
-
-    fetchRoleWeights()
+    
+    loadRoleWeights()
   }, [])
 
+  // Load top battlers for selected role/category
   useEffect(() => {
-    const fetchTopBattlers = async () => {
+    async function loadTopBattlers() {
       setIsLoading(true)
       try {
-        // Use client-side mock data instead of server-side fetch
-        const data = getMockTopBattlersByRole(selectedRole, selectedCategory, selectedAttribute, 10)
+        const data = await getTopBattlersByRole(
+          selectedRole, 
+          selectedCategory, 
+          selectedAttribute === 'all' ? undefined : selectedAttribute,
+          10
+        )
+        
         setTopBattlers(data)
+        setHasData(data.length > 0)
       } catch (error) {
-        console.error("Error fetching top battlers:", error)
+        console.error("Error loading top battlers:", error)
         setTopBattlers([])
       } finally {
         setIsLoading(false)
       }
     }
-
-    fetchTopBattlers()
+    
+    loadTopBattlers()
   }, [selectedRole, selectedCategory, selectedAttribute])
 
+  // Helper functions for role display
   const getRoleColor = (role: UserRole): string => {
     const roleWeight = roleWeights.find((rw) => rw.role === role)
     return roleWeight?.color || "gray"
@@ -76,6 +86,14 @@ export default function RoleBasedAnalytics({
   const getRoleDisplayName = (role: UserRole): string => {
     const roleWeight = roleWeights.find((rw) => rw.role === role)
     return roleWeight?.displayName || role
+  }
+
+  if (isLoading && roleWeights.length === 0) {
+    return (
+      <div className="flex justify-center py-8">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    )
   }
 
   return (
@@ -129,22 +147,37 @@ export default function RoleBasedAnalytics({
         </div>
       </div>
 
+      {!hasData && !isLoading ? (
+        <Alert className="mb-6">
+          <Info className="h-4 w-4" />
+          <AlertTitle>Role-Based Analytics</AlertTitle>
+          <AlertDescription>
+            This feature will display battler rankings weighted by different user roles.
+            Currently, there isn't enough real data to show meaningful results.
+            As more users rate battles, this section will populate with real analytics.
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
       <Card>
         <CardHeader>
           <CardTitle>
             Top Battlers by {getRoleDisplayName(selectedRole)} Ratings
             {selectedCategory && ` - ${selectedCategory}`}
-            {selectedAttribute && ` (${selectedAttribute})`}
+            {selectedAttribute && selectedAttribute !== 'all' && ` (${selectedAttribute})`}
           </CardTitle>
+          <CardDescription>
+            Battlers with highest ratings from {getRoleDisplayName(selectedRole)} users
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <div className="h-96 flex items-center justify-center">
-              <p>Loading data...</p>
+              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
             </div>
-          ) : topBattlers.length === 0 ? (
+          ) : !hasData ? (
             <div className="h-96 flex items-center justify-center">
-              <p>No data available for the selected criteria.</p>
+              <p className="text-gray-400">No data available for the selected criteria yet.</p>
             </div>
           ) : (
             <div className="space-y-6">
@@ -173,35 +206,38 @@ export default function RoleBasedAnalytics({
                 </ResponsiveContainer>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {topBattlers.slice(0, 6).map((battler, index) => (
-                  <Link key={battler.battlerId} href={`/battlers/${battler.battlerId}`} className="block">
-                    <Card className="hover:border-purple-500 transition-colors">
-                      <CardContent className="p-4">
-                        <div className="flex items-center gap-3">
-                          <div className="relative w-12 h-12 rounded-full overflow-hidden">
-                            <Image
-                              src={battler.battlerImage || "/placeholder.svg"}
-                              alt={battler.battlerName}
-                              fill
-                              className="object-cover"
-                            />
+              {topBattlers.length > 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {topBattlers.map((battler, index) => (
+                    <Link key={battler.battlerId} href={`/battlers/${battler.battlerId}`} className="block">
+                      <Card className="hover:border-purple-500 transition-colors">
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-3">
+                            <div className="relative w-12 h-12 rounded-full overflow-hidden bg-gray-800">
+                              {battler.battlerImage && (
+                                <Image
+                                  src={battler.battlerImage}
+                                  alt={battler.battlerName}
+                                  fill
+                                  className="object-cover"
+                                />
+                              )}
+                            </div>
+                            <div className="flex-1">
+                              <h3 className="font-medium">{battler.battlerName}</h3>
+                            </div>
+                            <div
+                              className={`px-3 py-2 rounded-full bg-${getRoleColor(selectedRole)}-900/30 text-${getRoleColor(selectedRole)}-400 font-bold`}
+                            >
+                              {battler.rating.toFixed(1)}
+                            </div>
                           </div>
-                          <div className="flex-1">
-                            <h3 className="font-medium">{battler.battlerName}</h3>
-                            <p className="text-sm text-gray-400">{battler.battlerLocation}</p>
-                          </div>
-                          <div
-                            className={`px-3 py-2 rounded-full bg-${getRoleColor(selectedRole)}-900/30 text-${getRoleColor(selectedRole)}-400 font-bold`}
-                          >
-                            {battler.rating.toFixed(1)}
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                ))}
-              </div>
+                        </CardContent>
+                      </Card>
+                    </Link>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </CardContent>
@@ -209,4 +245,3 @@ export default function RoleBasedAnalytics({
     </div>
   )
 }
-

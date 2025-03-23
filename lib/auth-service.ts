@@ -1,7 +1,7 @@
-"use server"
+"use client"
 
-import { cookies } from "next/headers"
 import { createClient } from "@supabase/supabase-js"
+import { supabase } from "@/lib/supabase"
 
 // In a real app, this would use a proper authentication system
 // This is a simplified version for demonstration purposes
@@ -10,32 +10,23 @@ const ADMIN_USERNAME = "admin"
 const ADMIN_PASSWORD = "password123"
 const AUTH_COOKIE = "battle_rap_admin_auth"
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-const supabase = createClient(supabaseUrl, supabaseKey)
-
+// Client-side authentication functions
 export async function login(username: string, password: string): Promise<boolean> {
   if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
-    // Set auth cookie
-    cookies().set({
-      name: AUTH_COOKIE,
-      value: "authenticated",
-      httpOnly: true,
-      path: "/",
-      maxAge: 60 * 60 * 24 * 7, // 1 week
-    })
+    // Using localStorage instead of cookies for client-side auth
+    localStorage.setItem(AUTH_COOKIE, "authenticated")
     return true
   }
   return false
 }
 
 export async function logout(): Promise<void> {
-  cookies().delete(AUTH_COOKIE)
+  localStorage.removeItem(AUTH_COOKIE)
 }
 
 export async function isAuthenticated(): Promise<boolean> {
-  const authCookie = cookies().get(AUTH_COOKIE)
-  return authCookie?.value === "authenticated"
+  const authValue = localStorage.getItem(AUTH_COOKIE)
+  return authValue === "authenticated"
 }
 
 export async function sendVerificationEmail(email: string): Promise<void> {
@@ -52,21 +43,17 @@ export async function sendVerificationEmail(email: string): Promise<void> {
 
 export async function verifyEmail(userId: string, code: string): Promise<{ success: boolean }> {
   // In a real app, this would verify the code against what's stored in the database
-  // For now, we'll just simulate it
+  // For now, we'll just simulate a successful verification
+  console.log(`Verifying email for user ${userId} with code ${code}`)
 
-  // For demo purposes, we'll accept any 6-digit code
-  if (code.length === 6 && /^\d+$/.test(code)) {
-    // Update the user's verified status in the database
-    const { error } = await supabase.from("user_profiles").update({ verified: true }).eq("id", userId)
+  // Mock verification logic - for demo, any code that's 6 digits will work
+  const isValidCode = /^\d{6}$/.test(code)
 
-    if (error) {
-      console.error("Error updating user verified status:", error)
-      return { success: false }
-    }
-
+  if (isValidCode) {
+    // In a real app, you would update the user's verified status in the database
+    // For demo purposes, we'll just return success
     return { success: true }
   }
 
   return { success: false }
 }
-

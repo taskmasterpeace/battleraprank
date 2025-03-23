@@ -15,18 +15,47 @@ export interface UserStats {
 
 export interface CommunityStats {
   totalUsers: number
-  newUsersThisWeek: number
-  totalRatings: number
-  newRatingsThisWeek: number
-  averageRating: number
   activeUsers: number
-  roleBreakdown: {
+  totalRatings: number
+  totalBattlers: number
+  averageRating: number
+  lastUpdated: string
+  newUsersThisWeek?: number
+  newRatingsThisWeek?: number
+  roleBreakdown?: {
     role: string
     percentage: number
   }[]
-  ratingDistribution: {
+  ratingDistribution?: {
     range: string
     percentage: number
   }[]
 }
 
+export interface LeaderboardEntry {
+  userId: string
+  username: string
+  displayName: string
+  profileImage: string
+  totalPoints: number
+  rank: number
+  change?: number
+  isCurrentUser?: boolean
+  totalRatings?: number
+  consistency?: number
+  influence?: number
+  accuracyScore?: number
+  followers?: number
+}
+
+export interface TopContributor {
+  userId: string
+  username: string
+  displayName: string
+  profileImage: string
+  contributionCount: number
+  lastActive: string
+  contribution?: string
+  score?: number
+  description?: string
+}

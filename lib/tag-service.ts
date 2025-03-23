@@ -1,4 +1,7 @@
-"use client"
+"use server"
+
+import { createServerComponentClient } from "@supabase/auth-helpers-nextjs"
+import { cookies } from "next/headers"
 
 // Types for tags
 export interface Tag {
@@ -10,189 +13,168 @@ export interface Tag {
   createdAt: Date
 }
 
-// Get tags from localStorage or initialize with defaults
-export function getTags(): Tag[] {
-  if (typeof window === "undefined") return []
-
-  const storedTags = localStorage.getItem("mockTags")
-  if (storedTags) {
-    return JSON.parse(storedTags)
+// Get all tags
+export async function getTags(): Promise<Tag[]> {
+  try {
+    const supabase = createServerComponentClient({ cookies })
+    
+    const { data, error } = await supabase
+      .from('tags')
+      .select('*')
+      .order('name', { ascending: true })
+    
+    if (error) {
+      console.error('Error fetching tags:', error)
+      return []
+    }
+    
+    return data.map(tag => ({
+      ...tag,
+      createdAt: new Date(tag.createdAt)
+    })) as Tag[]
+  } catch (error) {
+    console.error('Error fetching tags:', error)
+    return []
   }
-
-  // Default tags if none exist
-  const defaultTags: Tag[] = [
-    {
-      id: "1",
-      name: "URL",
-      description: "Ultimate Rap League",
-      isHidden: false,
-      category: "League",
-      createdAt: new Date(),
-    },
-    {
-      id: "2",
-      name: "East Coast",
-      description: "Battlers from the East Coast",
-      isHidden: false,
-      category: "Region",
-      createdAt: new Date(),
-    },
-    {
-      id: "3",
-      name: "West Coast",
-      description: "Battlers from the West Coast",
-      isHidden: false,
-      category: "Region",
-      createdAt: new Date(),
-    },
-    {
-      id: "4",
-      name: "Veteran",
-      description: "Experienced battlers",
-      isHidden: false,
-      category: "Experience",
-      createdAt: new Date(),
-    },
-    {
-      id: "5",
-      name: "Puncher",
-      description: "Known for punchlines",
-      isHidden: false,
-      category: "Style",
-      createdAt: new Date(),
-    },
-    {
-      id: "6",
-      name: "Lyricist",
-      description: "Known for lyrical ability",
-      isHidden: false,
-      category: "Style",
-      createdAt: new Date(),
-    },
-    {
-      id: "7",
-      name: "Performance",
-      description: "Known for performance",
-      isHidden: false,
-      category: "Style",
-      createdAt: new Date(),
-    },
-    {
-      id: "8",
-      name: "Technical",
-      description: "Technical rappers",
-      isHidden: false,
-      category: "Style",
-      createdAt: new Date(),
-    },
-    {
-      id: "9",
-      name: "lady",
-      description: "Female battlers",
-      isHidden: true,
-      category: "Gender",
-      createdAt: new Date(),
-    },
-    {
-      id: "10",
-      name: "international",
-      description: "Non-US battlers",
-      isHidden: true,
-      category: "Region",
-      createdAt: new Date(),
-    },
-    {
-      id: "11",
-      name: "UK",
-      description: "United Kingdom battlers",
-      isHidden: false,
-      category: "Region",
-      createdAt: new Date(),
-    },
-    {
-      id: "12",
-      name: "QOTR",
-      description: "Queen of the Ring",
-      isHidden: false,
-      category: "League",
-      createdAt: new Date(),
-    },
-    {
-      id: "13",
-      name: "Don't Flop",
-      description: "UK battle league",
-      isHidden: false,
-      category: "League",
-      createdAt: new Date(),
-    },
-    {
-      id: "14",
-      name: "Street",
-      description: "Street-oriented content",
-      isHidden: false,
-      category: "Style",
-      createdAt: new Date(),
-    },
-  ]
-
-  localStorage.setItem("mockTags", JSON.stringify(defaultTags))
-  return defaultTags
 }
 
-// Save tags to localStorage
-export function saveTags(tags: Tag[]): void {
-  if (typeof window === "undefined") return
-  localStorage.setItem("mockTags", JSON.stringify(tags))
+// Get tags by category
+export async function getTagsByCategory(category: string): Promise<Tag[]> {
+  try {
+    const supabase = createServerComponentClient({ cookies })
+    
+    const { data, error } = await supabase
+      .from('tags')
+      .select('*')
+      .eq('category', category)
+      .order('name', { ascending: true })
+    
+    if (error) {
+      console.error(`Error fetching tags for category ${category}:`, error)
+      return []
+    }
+    
+    return data.map(tag => ({
+      ...tag,
+      createdAt: new Date(tag.createdAt)
+    })) as Tag[]
+  } catch (error) {
+    console.error(`Error fetching tags for category ${category}:`, error)
+    return []
+  }
 }
 
 // Add a new tag
-export function addTag(tag: Omit<Tag, "id" | "createdAt">): Tag {
-  const tags = getTags()
-  const newTag: Tag = {
-    ...tag,
-    id: Math.random().toString(36).substring(2, 9),
-    createdAt: new Date(),
+export async function addTag(tag: Omit<Tag, "id" | "createdAt">): Promise<Tag> {
+  try {
+    const supabase = createServerComponentClient({ cookies })
+    
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user) {
+      throw new Error("You must be logged in to add a tag")
+    }
+    
+    const newTag = {
+      ...tag,
+      createdAt: new Date().toISOString()
+    }
+    
+    const { data, error } = await supabase
+      .from('tags')
+      .insert(newTag)
+      .select()
+      .single()
+    
+    if (error) {
+      console.error('Error adding tag:', error)
+      throw new Error("Failed to add tag")
+    }
+    
+    return {
+      ...data,
+      createdAt: new Date(data.createdAt)
+    } as Tag
+  } catch (error) {
+    console.error('Error adding tag:', error)
+    throw error
   }
-
-  tags.push(newTag)
-  saveTags(tags)
-  return newTag
 }
 
 // Update an existing tag
-export function updateTag(id: string, updates: Partial<Omit<Tag, "id" | "createdAt">>): Tag | null {
-  const tags = getTags()
-  const index = tags.findIndex((tag) => tag.id === id)
-
-  if (index === -1) return null
-
-  tags[index] = { ...tags[index], ...updates }
-  saveTags(tags)
-  return tags[index]
+export async function updateTag(
+  id: string, 
+  updates: Partial<Omit<Tag, "id" | "createdAt">>
+): Promise<Tag | null> {
+  try {
+    const supabase = createServerComponentClient({ cookies })
+    
+    const { data, error } = await supabase
+      .from('tags')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single()
+    
+    if (error) {
+      console.error('Error updating tag:', error)
+      return null
+    }
+    
+    return {
+      ...data,
+      createdAt: new Date(data.createdAt)
+    } as Tag
+  } catch (error) {
+    console.error('Error updating tag:', error)
+    return null
+  }
 }
 
 // Delete a tag
-export function deleteTag(id: string): boolean {
-  const tags = getTags()
-  const filteredTags = tags.filter((tag) => tag.id !== id)
-
-  if (filteredTags.length === tags.length) return false
-
-  saveTags(filteredTags)
-  return true
+export async function deleteTag(id: string): Promise<boolean> {
+  try {
+    const supabase = createServerComponentClient({ cookies })
+    
+    const { error } = await supabase
+      .from('tags')
+      .delete()
+      .eq('id', id)
+    
+    if (error) {
+      console.error('Error deleting tag:', error)
+      return false
+    }
+    
+    return true
+  } catch (error) {
+    console.error('Error deleting tag:', error)
+    return false
+  }
 }
 
 // Get tag categories
-export function getTagCategories(): string[] {
-  const tags = getTags()
-  const categories = new Set<string>()
-
-  tags.forEach((tag) => {
-    if (tag.category) {
-      categories.add(tag.category)
+export async function getTagCategories(): Promise<string[]> {
+  try {
+    const supabase = createServerComponentClient({ cookies })
+    
+    const { data, error } = await supabase
+      .from('tags')
+      .select('category')
+      .not('category', 'is', null)
+    
+    if (error) {
+      console.error('Error fetching tag categories:', error)
+      return []
     }
-  })
-
-  return Array.from(categories).sort()
+    
+    // Extract unique categories
+    const categories = Array.from(new Set(data.map(tag => tag.category)))
+      .filter(Boolean) as string[]
+    
+    return categories
+  } catch (error) {
+    console.error('Error fetching tag categories:', error)
+    return []
+  }
 }
-

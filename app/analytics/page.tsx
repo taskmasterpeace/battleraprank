@@ -16,411 +16,435 @@ import {
   LineChart,
   Line,
 } from "@/components/ui/chart"
-import RoleBasedAnalytics from "@/components/analytics/RoleBasedAnalytics"
-
-// Default mock data if nothing is in localStorage
-const defaultMockData = {
-  topRatedBattlers: [
-    { id: "1", name: "Loaded Lux", total_points: 9.2 },
-    { id: "2", name: "Rum Nitty", total_points: 9.0 },
-    { id: "3", name: "Geechi Gotti", total_points: 8.9 },
-    { id: "4", name: "Tsu Surf", total_points: 8.7 },
-    { id: "5", name: "JC", total_points: 8.5 },
-    { id: "6", name: "K-Shine", total_points: 8.3 },
-    { id: "7", name: "Hitman Holla", total_points: 8.2 },
-    { id: "8", name: "Charlie Clips", total_points: 8.1 },
-    { id: "9", name: "Daylyt", total_points: 8.0 },
-    { id: "10", name: "T-Rex", total_points: 7.9 },
-  ],
-  categoryAverages: [
-    { name: "Writing", average: 8.2 },
-    { name: "Performance", average: 7.8 },
-    { name: "Personal", average: 8.0 },
-  ],
-  trendData: [
-    { month: "Jan", rating: 7.5 },
-    { month: "Feb", rating: 7.8 },
-    { month: "Mar", rating: 8.0 },
-    { month: "Apr", rating: 8.2 },
-    { month: "May", rating: 8.5 },
-    { month: "Jun", rating: 8.3 },
-    { month: "Jul", rating: 8.7 },
-    { month: "Aug", rating: 8.9 },
-    { month: "Sep", rating: 9.0 },
-    { month: "Oct", rating: 9.2 },
-  ],
-}
+import { supabase } from "@/lib/supabase"
+import { Button } from "@/components/ui/button"
+import { AlertCircle, RefreshCw, Loader2 } from "lucide-react"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import Link from "next/link"
 
 export default function AnalyticsPage() {
-  // Move all hooks inside the component function
-  const [selectedBattler, setSelectedBattler] = useState("1")
-  const [analyticsData, setAnalyticsData] = useState(defaultMockData)
+  // State hooks for data management
+  const [battlers, setBattlers] = useState<any[]>([])
+  const [selectedBattler, setSelectedBattler] = useState("")
   const [isLoading, setIsLoading] = useState(true)
+  const [loadingTimeout, setLoadingTimeout] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  
+  // State for statistics from database
+  const [userCount, setUserCount] = useState<number>(0)
+  const [ratingsCount, setRatingsCount] = useState<number>(0)
+  const [battlesCount, setBattlesCount] = useState<number>(0)
+  const [hasData, setHasData] = useState(false)
 
-  // Mock data for battlers
-  const battlers = [
-    { id: "1", name: "Loaded Lux" },
-    { id: "2", name: "Tsu Surf" },
-    { id: "3", name: "Geechi Gotti" },
-    { id: "4", name: "Rum Nitty" },
-    { id: "5", name: "JC" },
-    { id: "6", name: "K-Shine" },
-  ]
-
+  // Load battlers from Supabase
   useEffect(() => {
-    // Function to load data from localStorage
-    function loadMockData() {
-      setIsLoading(true)
+    async function loadRealData() {
       try {
-        // Check if we have mock data in localStorage
-        if (typeof window !== "undefined") {
-          const storedData = localStorage.getItem("mockAnalyticsData")
-
-          if (storedData) {
-            console.log("Found mock data in localStorage")
-            setAnalyticsData(JSON.parse(storedData))
-          } else {
-            console.log("No mock data found in localStorage, using default data")
-            setAnalyticsData(defaultMockData)
-          }
+        console.log("Loading analytics data...")
+        
+        // Load battlers
+        const { data: battlersData, error: battlersError } = await supabase
+          .from("battlers")
+          .select("id, name")
+          .order("name")
+        
+        if (battlersError) {
+          console.error("Error loading battlers:", battlersError.message)
+          setError("Failed to load battlers: " + battlersError.message)
+        } else if (battlersData && battlersData.length > 0) {
+          console.log(`Loaded ${battlersData.length} battlers`)
+          setBattlers(battlersData)
+          setSelectedBattler(battlersData[0].id)
         }
-      } catch (error) {
-        console.error("Error loading mock data:", error)
-        setAnalyticsData(defaultMockData)
+        
+        // Load user count
+        const { count: userCountResult, error: userCountError } = await supabase
+          .from("user_profiles")
+          .select("*", { count: 'exact', head: true })
+        
+        if (userCountError) {
+          console.error("Error loading user count:", userCountError.message)
+        } else {
+          console.log(`Loaded user count: ${userCountResult}`)
+          setUserCount(userCountResult || 0)
+        }
+        
+        // Load ratings count
+        const { count: ratingsCountResult, error: ratingsCountError } = await supabase
+          .from("ratings")
+          .select("*", { count: 'exact', head: true })
+        
+        if (ratingsCountError) {
+          console.error("Error loading ratings count:", ratingsCountError.message)
+        } else {
+          console.log(`Loaded ratings count: ${ratingsCountResult}`)
+          setRatingsCount(ratingsCountResult || 0)
+        }
+        
+        // Load battles count
+        const { count: battlesCountResult, error: battlesCountError } = await supabase
+          .from("battles")
+          .select("*", { count: 'exact', head: true })
+        
+        if (battlesCountError) {
+          console.error("Error loading battles count:", battlesCountError.message)
+        } else {
+          console.log(`Loaded battles count: ${battlesCountResult}`)
+          setBattlesCount(battlesCountResult || 0)
+        }
+        
+        // Determine if we have enough data to show analytics
+        setHasData(
+          (battlersData?.length || 0) > 0 && 
+          (userCountResult || 0) > 0 && 
+          (ratingsCountResult || 0) > 0
+        )
+      } catch (error: any) {
+        console.error("Error loading analytics data:", error)
+        setError(error.message || "An unexpected error occurred while loading analytics data")
       } finally {
         setIsLoading(false)
       }
     }
-
-    loadMockData()
+    
+    // Set timeout to detect if loading takes too long
+    const timeoutId = setTimeout(() => {
+      if (isLoading) {
+        console.warn("Analytics loading timed out after 10 seconds")
+        setLoadingTimeout(true)
+      }
+    }, 10000)
+    
+    loadRealData()
+    
+    return () => clearTimeout(timeoutId)
   }, [])
+  
+  // Function to handle refresh
+  const handleRefresh = () => {
+    setIsLoading(true)
+    setLoadingTimeout(false)
+    setError(null)
+    
+    // Restart the data load
+    const loadData = async () => {
+      try {
+        // ...same loading logic as above...
+        // For brevity, I'm calling the same effect logic
+        const { data: battlersData } = await supabase
+          .from("battlers")
+          .select("id, name")
+          .order("name")
+          
+        if (battlersData && battlersData.length > 0) {
+          setBattlers(battlersData)
+          setSelectedBattler(battlersData[0].id)
+        }
+        
+        // Get counts for overview
+        const { count: userCount } = await supabase
+          .from("user_profiles")
+          .select("*", { count: 'exact', head: true })
+          
+        const { count: ratingsCount } = await supabase
+          .from("ratings")
+          .select("*", { count: 'exact', head: true })
+          
+        const { count: battlesCount } = await supabase
+          .from("battles")
+          .select("*", { count: 'exact', head: true })
+          
+        setUserCount(userCount || 0)
+        setRatingsCount(ratingsCount || 0)
+        setBattlesCount(battlesCount || 0)
+        
+        setHasData(
+          (battlersData?.length || 0) > 0 && 
+          (userCount || 0) > 0 && 
+          (ratingsCount || 0) > 0
+        )
+      } catch (error: any) {
+        console.error("Error refreshing data:", error)
+        setError(error.message || "Failed to refresh data")
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    
+    loadData()
+  }
+
+  // Function to render the no data message
+  const renderNoDataMessage = () => (
+    <Alert variant="destructive" className="mb-6">
+      <AlertCircle className="h-4 w-4" />
+      <AlertTitle>No Analytics Data Available</AlertTitle>
+      <AlertDescription>
+        There isn't enough real data in the database to display meaningful analytics.
+        Add more users, battles, and ratings to see analytics here.
+      </AlertDescription>
+    </Alert>
+  )
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8">Analytics Dashboard</h1>
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold">Analytics Dashboard</h1>
+        {!isLoading && (
+          <Button onClick={handleRefresh} variant="outline">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh Data
+          </Button>
+        )}
+      </div>
 
-      <Tabs defaultValue="overview">
-        <TabsList className="mb-8 bg-gray-900 border border-gray-800">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="role-based">Role-Based</TabsTrigger>
-          <TabsTrigger value="battler">Battler Analysis</TabsTrigger>
-          <TabsTrigger value="community">Community Trends</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="overview">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            <Card>
-              <CardHeader>
-                <CardTitle>Top Rated Battlers</CardTitle>
-                <CardDescription>Overall ratings across all categories</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {isLoading ? (
-                  <div className="flex items-center justify-center h-[300px]">
-                    <p>Loading data...</p>
-                  </div>
-                ) : (
-                  <div className="h-[400px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        layout="vertical"
-                        data={analyticsData.topRatedBattlers.map((b) => ({ name: b.name, rating: b.total_points }))}
-                        margin={{ top: 20, right: 30, left: 40, bottom: 5 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis type="number" domain={[0, 10]} />
-                        <YAxis dataKey="name" type="category" width={100} />
-                        <Tooltip />
-                        <Bar dataKey="rating" fill="#8884d8" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Category Averages</CardTitle>
-                <CardDescription>Average ratings by category</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {isLoading ? (
-                  <div className="flex items-center justify-center h-[300px]">
-                    <p>Loading data...</p>
-                  </div>
-                ) : (
-                  <div className="h-[400px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        data={analyticsData.categoryAverages}
-                        margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="name" />
-                        <YAxis domain={[0, 10]} />
-                        <Tooltip />
-                        <Bar dataKey="average" fill="#82ca9d" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Rating Trends</CardTitle>
-                <CardDescription>Average ratings over time</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {isLoading ? (
-                  <div className="flex items-center justify-center h-[300px]">
-                    <p>Loading data...</p>
-                  </div>
-                ) : (
-                  <div className="h-[400px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={analyticsData.trendData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="month" />
-                        <YAxis domain={[7, 10]} />
-                        <Tooltip />
-                        <Line type="monotone" dataKey="rating" stroke="#8884d8" activeDot={{ r: 8 }} />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+      {isLoading ? (
+        <div>
+          <div className="flex justify-center py-8">
+            <div className="flex flex-col items-center">
+              <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+              <p className="text-muted-foreground">Loading analytics data...</p>
+            </div>
           </div>
-        </TabsContent>
+          
+          {loadingTimeout && (
+            <Alert className="mt-8" variant="default">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Loading is taking longer than expected</AlertTitle>
+              <AlertDescription>
+                This may indicate a connection issue with the database. Try refreshing the page or visit 
+                the <Link href="/diagnostics" className="underline">diagnostics page</Link> to check the system status.
+              </AlertDescription>
+            </Alert>
+          )}
+        </div>
+      ) : error ? (
+        <Alert variant="destructive" className="mb-6">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error loading analytics</AlertTitle>
+          <AlertDescription>
+            {error}
+            <div className="mt-2">
+              <Link href="/diagnostics" className="text-sm underline">
+                Check system status
+              </Link>
+            </div>
+          </AlertDescription>
+        </Alert>
+      ) : (
+        <Tabs defaultValue="overview">
+          <TabsList className="mb-8 bg-gray-900 border border-gray-800">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="battler">Battler Analysis</TabsTrigger>
+            <TabsTrigger value="community">Community</TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="role-based">
-          <RoleBasedAnalytics />
-        </TabsContent>
+          <TabsContent value="overview">
+            {!hasData && renderNoDataMessage()}
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-xl">Total Users</CardTitle>
+                  <CardDescription>Platform users</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold">{userCount}</div>
+                  <p className="text-gray-400 text-sm">Actual count from database</p>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-xl">Total Ratings</CardTitle>
+                  <CardDescription>Battle ratings submitted</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold">{ratingsCount}</div>
+                  <p className="text-gray-400 text-sm">Actual count from database</p>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-xl">Battlers Count</CardTitle>
+                  <CardDescription>Total battlers in database</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold">{battlers.length}</div>
+                  <p className="text-gray-400 text-sm">Actual count from database</p>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-xl">Battles Count</CardTitle>
+                  <CardDescription>Total battles recorded</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold">{battlesCount}</div>
+                  <p className="text-gray-400 text-sm">Actual count from database</p>
+                </CardContent>
+              </Card>
+            </div>
+            
+            {hasData ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Battle Categories</CardTitle>
+                    <CardDescription>Distribution of battle types</CardDescription>
+                  </CardHeader>
+                  <CardContent className="h-80">
+                    <div className="flex h-full items-center justify-center">
+                      <p className="text-gray-400">Real data coming soon</p>
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Rating Trend</CardTitle>
+                    <CardDescription>Average rating over time</CardDescription>
+                  </CardHeader>
+                  <CardContent className="h-80">
+                    <div className="flex h-full items-center justify-center">
+                      <p className="text-gray-400">Real data coming soon</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            ) : null}
+          </TabsContent>
 
-        <TabsContent value="battler">
-          <div className="mb-6 flex justify-end">
-            <Select value={selectedBattler} onValueChange={setSelectedBattler}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Select battler" />
-              </SelectTrigger>
-              <SelectContent>
-                {battlers.map((battler) => (
-                  <SelectItem key={battler.id} value={battler.id}>
-                    {battler.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="lg:col-span-2">
-              <CardHeader>
-                <CardTitle>Attribute Breakdown</CardTitle>
-                <CardDescription>Detailed ratings for each attribute</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[400px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={[
-                        { name: "Wordplay", rating: 8.5 },
-                        { name: "Punchlines", rating: 7.2 },
-                        { name: "Schemes", rating: 9.0 },
-                        { name: "Angles", rating: 8.8 },
-                        { name: "Delivery", rating: 7.5 },
-                        { name: "Stage Presence", rating: 8.0 },
-                        { name: "Crowd Control", rating: 7.8 },
-                        { name: "Showmanship", rating: 7.2 },
-                        { name: "Authenticity", rating: 9.2 },
-                        { name: "Battle IQ", rating: 9.5 },
-                        { name: "Preparation", rating: 9.0 },
-                        { name: "Consistency", rating: 8.0 },
-                      ]}
-                      margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" />
-                      <YAxis domain={[0, 10]} />
-                      <Tooltip />
-                      <Bar dataKey="rating" fill="#8884d8" />
-                    </BarChart>
-                  </ResponsiveContainer>
+          <TabsContent value="battler">
+            {!hasData ? (
+              renderNoDataMessage()
+            ) : (
+              <>
+                <div className="mb-6 flex justify-end">
+                  <Select value={selectedBattler} onValueChange={setSelectedBattler}>
+                    <SelectTrigger className="w-[200px]">
+                      <SelectValue placeholder="Select battler" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {battlers.map((battler) => (
+                        <SelectItem key={battler.id} value={battler.id}>
+                          {battler.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-              </CardContent>
-            </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Most Common Positive Badges</CardTitle>
-                <CardDescription>Badges most frequently assigned</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      layout="vertical"
-                      data={[
-                        { name: "Wordsmith", count: 85 },
-                        { name: "Pen Game", count: 72 },
-                        { name: "Battle IQ", count: 68 },
-                        { name: "Consistent", count: 55 },
-                        { name: "Versatile", count: 42 },
-                      ]}
-                      margin={{ top: 20, right: 30, left: 80, bottom: 5 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis type="number" />
-                      <YAxis dataKey="name" type="category" />
-                      <Tooltip />
-                      <Bar dataKey="count" fill="#82ca9d" />
-                    </BarChart>
-                  </ResponsiveContainer>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Performance by Category</CardTitle>
+                      <CardDescription>Ratings across different categories</CardDescription>
+                    </CardHeader>
+                    <CardContent className="h-80">
+                      <div className="flex h-full items-center justify-center">
+                        <p className="text-gray-400">Real data coming soon</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Historical Performance</CardTitle>
+                      <CardDescription>Rating trends over time</CardDescription>
+                    </CardHeader>
+                    <CardContent className="h-80">
+                      <div className="flex h-full items-center justify-center">
+                        <p className="text-gray-400">Real data coming soon</p>
+                      </div>
+                    </CardContent>
+                  </Card>
                 </div>
-              </CardContent>
-            </Card>
+                
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Battle History</CardTitle>
+                    <CardDescription>Past battles and ratings</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex h-[200px] items-center justify-center">
+                      <p className="text-gray-400">Real data coming soon</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </>
+            )}
+          </TabsContent>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Most Common Negative Badges</CardTitle>
-                <CardDescription>Badges most frequently assigned</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      layout="vertical"
-                      data={[
-                        { name: "Inconsistent", count: 45 },
-                        { name: "Predictable", count: 38 },
-                        { name: "Chokes", count: 32 },
-                        { name: "One-Dimensional", count: 28 },
-                        { name: "Low Energy", count: 25 },
-                      ]}
-                      margin={{ top: 20, right: 30, left: 80, bottom: 5 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis type="number" />
-                      <YAxis dataKey="name" type="category" />
-                      <Tooltip />
-                      <Bar dataKey="count" fill="#ff8042" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="community">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card className="md:col-span-2">
-              <CardHeader>
-                <CardTitle>Community Rating Distribution</CardTitle>
-                <CardDescription>How the community rates battlers overall</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[400px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={[
-                        { rating: "0-1", count: 5 },
-                        { rating: "1-2", count: 12 },
-                        { rating: "2-3", count: 25 },
-                        { rating: "3-4", count: 38 },
-                        { rating: "4-5", count: 65 },
-                        { rating: "5-6", count: 120 },
-                        { rating: "6-7", count: 180 },
-                        { rating: "7-8", count: 210 },
-                        { rating: "8-9", count: 145 },
-                        { rating: "9-10", count: 75 },
-                      ]}
-                      margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="rating" />
-                      <YAxis />
-                      <Tooltip />
-                      <Bar dataKey="count" fill="#8884d8" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Most Valued Attributes</CardTitle>
-                <CardDescription>Attributes with highest average ratings</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      layout="vertical"
-                      data={[
-                        { name: "Battle IQ", average: 8.9 },
-                        { name: "Wordplay", average: 8.7 },
-                        { name: "Punchlines", average: 8.5 },
-                        { name: "Authenticity", average: 8.3 },
-                        { name: "Delivery", average: 8.1 },
-                      ]}
-                      margin={{ top: 20, right: 30, left: 80, bottom: 5 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis type="number" domain={[0, 10]} />
-                      <YAxis dataKey="name" type="category" />
-                      <Tooltip />
-                      <Bar dataKey="average" fill="#82ca9d" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Rating Trends Over Time</CardTitle>
-                <CardDescription>How community ratings have changed</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart
-                      data={[
-                        { month: "Jan", writing: 7.5, performance: 7.2, personal: 7.8 },
-                        { month: "Feb", writing: 7.7, performance: 7.3, personal: 7.9 },
-                        { month: "Mar", writing: 7.9, performance: 7.5, personal: 8.0 },
-                        { month: "Apr", writing: 8.1, performance: 7.7, personal: 8.2 },
-                        { month: "May", writing: 8.3, performance: 7.9, personal: 8.4 },
-                        { month: "Jun", writing: 8.2, performance: 8.0, personal: 8.3 },
-                        { month: "Jul", writing: 8.4, performance: 8.2, personal: 8.5 },
-                        { month: "Aug", writing: 8.6, performance: 8.3, personal: 8.7 },
-                        { month: "Sep", writing: 8.7, performance: 8.4, personal: 8.8 },
-                        { month: "Oct", writing: 8.9, performance: 8.6, personal: 9.0 },
-                      ]}
-                      margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="month" />
-                      <YAxis domain={[7, 10]} />
-                      <Tooltip />
-                      <Legend />
-                      <Line type="monotone" dataKey="writing" stroke="#8884d8" activeDot={{ r: 8 }} />
-                      <Line type="monotone" dataKey="performance" stroke="#82ca9d" />
-                      <Line type="monotone" dataKey="personal" stroke="#ffc658" />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-      </Tabs>
+          <TabsContent value="community">
+            {!hasData ? (
+              renderNoDataMessage()
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card className="md:col-span-2">
+                  <CardHeader>
+                    <CardTitle>Community Stats</CardTitle>
+                    <CardDescription>User and rating statistics</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                      <div>
+                        <h3 className="text-lg font-semibold mb-2">Total Users</h3>
+                        <p className="text-3xl font-bold">{userCount}</p>
+                        <p className="text-gray-400 text-sm">from database</p>
+                      </div>
+                      
+                      <div>
+                        <h3 className="text-lg font-semibold mb-2">Total Ratings</h3>
+                        <p className="text-3xl font-bold">{ratingsCount}</p>
+                        <p className="text-gray-400 text-sm">from database</p>
+                      </div>
+                      
+                      <div>
+                        <h3 className="text-lg font-semibold mb-2">Avg. Rating</h3>
+                        <p className="text-3xl font-bold">-</p>
+                        <p className="text-gray-400 text-sm">real data coming soon</p>
+                      </div>
+                      
+                      <div>
+                        <h3 className="text-lg font-semibold mb-2">Active Users</h3>
+                        <p className="text-3xl font-bold">-</p>
+                        <p className="text-gray-400 text-sm">real data coming soon</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Most Active User Roles</CardTitle>
+                    <CardDescription>Distribution of user roles</CardDescription>
+                  </CardHeader>
+                  <CardContent className="h-80">
+                    <div className="flex h-full items-center justify-center">
+                      <p className="text-gray-400">Real data coming soon</p>
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Rating Distribution</CardTitle>
+                    <CardDescription>Breakdown of ratings by score range</CardDescription>
+                  </CardHeader>
+                  <CardContent className="h-80">
+                    <div className="flex h-full items-center justify-center">
+                      <p className="text-gray-400">Real data coming soon</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
+      )}
     </div>
   )
 }
-

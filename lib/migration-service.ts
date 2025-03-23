@@ -1,6 +1,8 @@
 "use server"
 
 import { supabase } from "@/lib/supabase"
+import { revalidatePath } from "next/cache"
+import { clearAllBattlers, clearAllContent, clearAllRatings } from "./direct-db"
 
 interface ClearOptions {
   clearBattlers: boolean
@@ -12,48 +14,96 @@ interface ClearOptions {
 }
 
 export async function clearMockData(options: ClearOptions): Promise<void> {
-  // In a real app, this would clear mock data from your database
-  // For now, we'll just simulate it
+  // Clear data from remote Supabase instance
   console.log("Clearing mock data with options:", options)
 
-  // Start a transaction
-  // In a real app with Supabase, you would use multiple queries
+  try {
+    // For battlers, attempt with direct DB connection first
+    if (options.clearBattlers) {
+      try {
+        // Try direct SQL execution first (bypasses RLS)
+        await clearAllBattlers()
+        console.log("Successfully cleared battlers using direct SQL")
+      } catch (directError) {
+        console.warn("Direct SQL clear failed, trying supabase client:", directError)
+        
+        try {
+          // Then try the RPC call (if the function exists)
+          const { error } = await supabase.rpc('delete_all_battlers')
+          
+          if (error) {
+            console.warn("RPC delete_all_battlers failed, falling back to direct DELETE:", error)
+            // Fallback to direct DELETE - might work depending on permissions
+            const { error: deleteError } = await supabase
+              .from("battlers")
+              .delete()
+              .not("id", "is", null)
+            
+            if (deleteError) {
+              console.error("Failed to delete battlers:", deleteError)
+              throw deleteError
+            }
+          }
+        } catch (e) {
+          console.error("Error trying to delete battlers:", e)
+          throw e
+        }
+      }
+    }
 
-  if (options.clearRatings) {
-    // Clear ratings
-    const { error } = await supabase.from("ratings").delete().not("id", "is", null)
-    if (error) throw error
+    if (options.clearRatings) {
+      try {
+        // Try direct SQL first
+        await clearAllRatings()
+        console.log("Successfully cleared ratings using direct SQL")
+      } catch (directError) {
+        console.warn("Direct SQL clear failed for ratings, using supabase client:", directError)
+        // Clear ratings
+        const { error } = await supabase.from("ratings").delete().not("id", "is", null)
+        if (error) throw error
+      }
+    }
+
+    if (options.clearContent) {
+      try {
+        // Try direct SQL first
+        await clearAllContent()
+        console.log("Successfully cleared content using direct SQL")
+      } catch (directError) {
+        console.warn("Direct SQL clear failed for content, using supabase client:", directError)
+        // Clear content
+        const { error } = await supabase.from("content_links").delete().not("id", "is", null)
+        if (error) throw error
+      }
+    }
+
+    if (options.clearBadges) {
+      // Clear badges
+      const { error } = await supabase.from("badges").delete().not("id", "is", null)
+      if (error) throw error
+    }
+
+    if (options.clearUsers && !options.preserveAdmins) {
+      // Clear all users
+      const { error } = await supabase.from("user_profiles").delete().not("id", "is", null)
+      if (error) throw error
+    } else if (options.clearUsers && options.preserveAdmins) {
+      // Clear non-admin users
+      const { error } = await supabase
+        .from("user_profiles")
+        .delete()
+        .not("roles->admin", "eq", "true")
+      if (error) throw error
+    }
+
+    // Revalidate all relevant paths
+    revalidatePath("/admin")
+    revalidatePath("/battlers")
+    
+  } catch (error) {
+    console.error("Error during clearMockData:", error)
+    throw error
   }
-
-  if (options.clearContent) {
-    // Clear content
-    const { error } = await supabase.from("content_links").delete().not("id", "is", null)
-    if (error) throw error
-  }
-
-  if (options.clearBattlers) {
-    // Clear battlers
-    const { error } = await supabase.from("battlers").delete().not("id", "is", null)
-    if (error) throw error
-  }
-
-  if (options.clearBadges) {
-    // Clear badges
-    const { error } = await supabase.from("badges").delete().not("id", "is", null)
-    if (error) throw error
-  }
-
-  if (options.clearUsers && !options.preserveAdmins) {
-    // Clear all users
-    const { error } = await supabase.from("user_profiles").delete().not("id", "is", null)
-    if (error) throw error
-  } else if (options.clearUsers && options.preserveAdmins) {
-    // Clear non-admin users
-    const { error } = await supabase.from("user_profiles").delete().not("roles->admin", "eq", true)
-    if (error) throw error
-  }
-
-  return Promise.resolve()
 }
 
 export async function exportData(): Promise<any> {
@@ -140,4 +190,3 @@ export async function importData(data: any): Promise<void> {
 
   return Promise.resolve()
 }
-

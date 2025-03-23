@@ -57,6 +57,7 @@ export default function MobileToolbar() {
             <Link
               key={item.href}
               href={item.href === "/menu" ? "#" : item.href}
+              prefetch={item.href !== "/menu"}
               onClick={
                 item.href === "/menu" ? () => document.getElementById("mobile-menu-trigger")?.click() : undefined
               }
@@ -80,4 +81,3 @@ export default function MobileToolbar() {
     </motion.div>
   )
 }
-

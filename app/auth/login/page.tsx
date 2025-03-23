@@ -19,22 +19,32 @@ export default function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
+  const [success, setSuccess] = useState("")
   const [isLoading, setIsLoading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError("")
     setIsLoading(true)
+    setError("")
+    setSuccess("")
 
     try {
+      console.log("Attempting to sign in with email:", email)
       const { error } = await signIn(email, password)
       if (error) {
-        setError(error.message)
+        // Special handling for unverified emails
+        if (error.message?.includes('Email not confirmed')) {
+          setError("Please verify your email before logging in. Check your inbox for a confirmation link.")
+        } else {
+          setError(error.message || "Failed to sign in")
+        }
       } else {
+        setSuccess("Signed in successfully!")
         router.push("/")
       }
     } catch (err: any) {
-      setError(err.message || "An error occurred during login")
+      console.error("Sign in error:", err)
+      setError(err.message || "An unexpected error occurred")
     } finally {
       setIsLoading(false)
     }
@@ -53,6 +63,9 @@ export default function LoginPage() {
         <CardContent className="space-y-4">
           {error && (
             <div className="p-3 text-sm bg-red-900/30 border border-red-800 text-red-400 rounded-md">{error}</div>
+          )}
+          {success && (
+            <div className="p-3 text-sm bg-green-900/30 border border-green-800 text-green-400 rounded-md">{success}</div>
           )}
 
           <SimpleGoogleButton />
@@ -122,4 +135,3 @@ export default function LoginPage() {
     </div>
   )
 }
-

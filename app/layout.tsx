@@ -13,7 +13,7 @@ const inter = Inter({ subsets: ["latin"] })
 export const metadata: Metadata = {
   title: "Battle Rap Algorithm",
   description: "Rate and analyze battle rap performances",
-    generator: 'v0.dev'
+  generator: 'v0dev'
 }
 
 export default function RootLayout({
@@ -36,7 +36,3 @@ export default function RootLayout({
     </html>
   )
 }
-
-
-
-import './globals.css'

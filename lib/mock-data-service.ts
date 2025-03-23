@@ -1,5 +1,6 @@
 "use server"
-import { supabase } from "./supabase"
+import { createServerComponentClient } from "@supabase/auth-helpers-nextjs"
+import { cookies } from "next/headers"
 
 // This service handles the storage and retrieval of mock data
 // It ensures analytics components can access the generated data
@@ -13,8 +14,12 @@ interface MockDataOptions {
 // First, let's check what tables actually exist in the database
 async function getExistingTables() {
   try {
+    const supabase = createServerComponentClient({ cookies })
+    
     // Query to get all tables in the public schema
-    const { data, error } = await supabase.from("_tables").select("*")
+    const { data, error } = await supabase.from("information_schema.tables")
+      .select("table_name")
+      .eq("table_schema", "public")
 
     if (error) {
       console.error("Error fetching tables:", error)
@@ -32,115 +37,94 @@ export async function generateMockData(options: MockDataOptions) {
   const { ratingCount, ratingVariance, timeSpan } = options
 
   try {
-    // For now, let's create mock data that doesn't rely on specific table names
-    const mockData = {
-      topRatedBattlers: [
-        { id: "1", name: "Loaded Lux", total_points: 9.2 },
-        { id: "2", name: "Rum Nitty", total_points: 9.0 },
-        { id: "3", name: "Geechi Gotti", total_points: 8.9 },
-        { id: "4", name: "Tsu Surf", total_points: 8.7 },
-        { id: "5", name: "JC", total_points: 8.5 },
-        { id: "6", name: "K-Shine", total_points: 8.3 },
-        { id: "7", name: "Hitman Holla", total_points: 8.2 },
-        { id: "8", name: "Charlie Clips", total_points: 8.1 },
-        { id: "9", name: "Daylyt", total_points: 8.0 },
-        { id: "10", name: "T-Rex", total_points: 7.9 },
-      ],
-      categoryAverages: [
-        { name: "Writing", average: 8.2 },
-        { name: "Performance", average: 7.8 },
-        { name: "Personal", average: 8.0 },
-      ],
-      trendData: [
-        { month: "Jan", rating: 7.5 },
-        { month: "Feb", rating: 7.8 },
-        { month: "Mar", rating: 8.0 },
-        { month: "Apr", rating: 8.2 },
-        { month: "May", rating: 8.5 },
-        { month: "Jun", rating: 8.3 },
-        { month: "Jul", rating: 8.7 },
-        { month: "Aug", rating: 8.9 },
-        { month: "Sep", rating: 9.0 },
-        { month: "Oct", rating: 9.2 },
-      ],
-    }
-
-    // Store this mock data in localStorage or sessionStorage for the client component to access
-    // Since we can't directly modify localStorage from a server component, we'll return the data
-    // and let the client component handle storage
-
-    return {
-      success: true,
-      message: "Generated mock analytics data",
-      data: mockData,
-    }
-  } catch (error) {
-    console.error("Error generating mock data:", error)
+    // Instead of generating mock data, return a message that this is no longer used
     return {
       success: false,
-      error: error.message,
+      message: "Mock data generation is no longer supported. The application now uses real data from Supabase."
     }
+  } catch (error) {
+    console.error("Error in generateMockData:", error)
+    return { success: false, error }
   }
 }
 
 export async function getAnalyticsData() {
   try {
-    // Instead of querying non-existent tables, return hardcoded mock data
+    const supabase = createServerComponentClient({ cookies })
+    
+    // Get real analytics data from the database
+    const [battlers, categories, attributes, userCounts, activityData] = await Promise.all([
+      // Top battlers
+      supabase
+        .from("battlers")
+        .select("id, name, totalPoints")
+        .order("totalPoints", { ascending: false })
+        .limit(10),
+        
+      // Category averages
+      supabase
+        .from("battler_category_averages")
+        .select("category, average")
+        .order("average", { ascending: false }),
+        
+      // Attribute averages 
+      supabase
+        .from("battler_attribute_averages")
+        .select("attribute, category, weightedAverage")
+        .order("weightedAverage", { ascending: false })
+        .limit(20),
+        
+      // User counts by role
+      supabase
+        .from("user_profiles")
+        .select("roles"),
+        
+      // Activity data - recent ratings
+      supabase
+        .from("ratings")
+        .select("createdAt, updatedAt")
+        .order("createdAt", { ascending: false })
+        .limit(50)
+    ])
+    
+    // Process user roles into counts
+    const userRoleCounts: Record<string, number> = {}
+    if (userCounts.data) {
+      userCounts.data.forEach(user => {
+        Object.entries(user.roles).forEach(([role, hasRole]) => {
+          if (hasRole) {
+            userRoleCounts[role] = (userRoleCounts[role] || 0) + 1
+          }
+        })
+      })
+    }
+    
     return {
-      topRatedBattlers: [
-        { id: "1", name: "Loaded Lux", total_points: 9.2 },
-        { id: "2", name: "Rum Nitty", total_points: 9.0 },
-        { id: "3", name: "Geechi Gotti", total_points: 8.9 },
-        { id: "4", name: "Tsu Surf", total_points: 8.7 },
-        { id: "5", name: "JC", total_points: 8.5 },
-        { id: "6", name: "K-Shine", total_points: 8.3 },
-        { id: "7", name: "Hitman Holla", total_points: 8.2 },
-        { id: "8", name: "Charlie Clips", total_points: 8.1 },
-        { id: "9", name: "Daylyt", total_points: 8.0 },
-        { id: "10", name: "T-Rex", total_points: 7.9 },
-      ],
-      categoryAverages: [
-        { name: "Writing", average: 8.2 },
-        { name: "Performance", average: 7.8 },
-        { name: "Personal", average: 8.0 },
-      ],
-      trendData: [
-        { month: "Jan", rating: 7.5 },
-        { month: "Feb", rating: 7.8 },
-        { month: "Mar", rating: 8.0 },
-        { month: "Apr", rating: 8.2 },
-        { month: "May", rating: 8.5 },
-        { month: "Jun", rating: 8.3 },
-        { month: "Jul", rating: 8.7 },
-        { month: "Aug", rating: 8.9 },
-        { month: "Sep", rating: 9.0 },
-        { month: "Oct", rating: 9.2 },
-      ],
+      success: true,
+      data: {
+        topRatedBattlers: battlers.data || [],
+        categoryAverages: categories.data || [],
+        attributeAverages: attributes.data || [],
+        userRoleCounts: userRoleCounts,
+        activityData: activityData.data || []
+      }
     }
   } catch (error) {
-    console.error("Error fetching analytics data:", error)
-    return {
-      topRatedBattlers: [],
-      categoryAverages: [],
-      trendData: [],
-    }
+    console.error("Error in getAnalyticsData:", error)
+    return { success: false, error }
   }
 }
 
 // Function to generate mock data for testing - simplified version that doesn't rely on database tables
 export async function generateMockAnalyticsData(count = 50) {
   try {
-    // Instead of trying to insert into the database, just return success
-    return {
-      success: true,
-      message: `Generated ${count} mock ratings (simulated)`,
-    }
-  } catch (error) {
-    console.error("Error generating mock analytics data:", error)
+    // This function is deprecated - return an error message
     return {
       success: false,
-      message: error.message,
+      message: "Mock data generation is no longer supported. The application now uses real data from Supabase."
     }
+  } catch (error) {
+    console.error("Error in generateMockAnalyticsData:", error)
+    return { success: false, error }
   }
 }
-
