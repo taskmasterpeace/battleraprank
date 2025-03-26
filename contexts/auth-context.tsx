@@ -14,6 +14,7 @@ interface AuthContextType {
   isLoading: boolean
   signIn: (email: string, password: string) => Promise<{ error: any }>
   signUp: (email: string, password: string, roles: UserRoles) => Promise<{ error: any; data: any }>
+  saveUserProfile: (email: string, password: string, roles: UserRoles) => Promise<{ error: any; data: any }>
   signInWithGoogle: (redirectTo?: string) => Promise<void>
   signOut: () => Promise<void>
   updateUserRoles: (roles: UserRoles) => Promise<{ error: any }>
@@ -134,7 +135,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setIsLoading(false)
         setInitialLoadDone(true)
       }
-    }, 5000) // Increased timeout to 5 seconds
+    }, 50000) // Increased timeout to 5 seconds
 
     getSession()
 
@@ -310,7 +311,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { data: null, error: new Error("No user data returned from signup") };
       }
 
-      console.log("User created successfully with ID:", data.user.id);
+      console.log("✅ Signup successful:");
+      console.log("🧑‍💻 User ID:", data.user.id);
+      console.log("📧 Email:", data.user.email);
+      console.log("🔑 Access Token:", data.session?.access_token);
+      console.log("🔁 Refresh Token:", data.session?.refresh_token);      
       
       return { data, error: null };
     } catch (error) {
@@ -318,6 +323,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { data: null, error };
     }
   }
+
+  const saveUserProfile = async (
+    userId: string,
+    email: string,
+    roles: UserRoles
+  ): Promise<{ data: any; error: any }> => {
+    const supabase = getSupabaseBrowser();
+  
+    await new Promise((res) => setTimeout(res, 300)); // optional delay
+  
+    const { error, data } = await supabase.from("user_profiles").insert([
+      {
+        id: userId,
+        email,
+        display_name: email.split("@")[0],
+        roles,
+      },
+    ]);
+  
+    if (error) {
+      console.error("❌ Insert into user_profiles failed:", error);
+    } else {
+      console.log("✅ user_profiles insert:", data);
+    }
+  
+    return { data, error };
+  };
+  
+  
 
   const signInWithGoogle = async (redirectTo?: string) => {
     if (MOCK_MODE) {
@@ -358,6 +392,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     try {
       await getSupabaseBrowser().auth.signOut()
+
+      setUser(null);
+      setSession(null);
+      setUserProfile(null);
+      
       router.refresh()
       router.push("/")
     } catch (error) {
@@ -429,7 +468,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signOut,
         updateUserRoles,
         hasRole,
-        refreshProfile
+        refreshProfile,
+        saveUserProfile
       }}
     >
       {children}

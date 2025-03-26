@@ -16,7 +16,7 @@ import type { UserRoles } from "@/types/auth-types"
 
 export default function SignupPage() {
   const router = useRouter()
-  const { signUp } = useAuth()
+  const { signUp, saveUserProfile } = useAuth()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
@@ -47,7 +47,7 @@ export default function SignupPage() {
       setError("Password must be at least 8 characters long")
       return
     }
-
+    
     setError("")
     setStep(2)
   }
@@ -61,6 +61,13 @@ export default function SignupPage() {
     try {
       console.log("Submitting signup with roles:", JSON.stringify(roles));
       const { data, error } = await signUp(email, password, roles)
+      if (data?.user) {
+        console.log("Saving user profile for", data.user.id, data.user.email);
+        
+        await saveUserProfile(data.user.id, data.user.email, roles);
+      }
+      console.log(email, password, roles);
+      
       
       if (error) {
         console.error("Signup error:", error);
@@ -68,7 +75,6 @@ export default function SignupPage() {
       } else {
         setSuccess("Registration successful! Please check your email to confirm your account.")
         router.push("/auth/welcome") 
-        // Clear form
         setEmail("")
         setPassword("")
         setConfirmPassword("")

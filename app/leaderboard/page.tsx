@@ -7,10 +7,10 @@ import TopContributorCards from "@/components/leaderboard/TopContributorCards"
 import { Trophy, Star, Award, Users } from "lucide-react"
 
 export default async function LeaderboardPage() {
-  // Fetch top users by different metrics
+  // Fetch top users by different metrics 
   const topRaters = await getTopRaters(10)
   const topContributors = await getTopContributors(3)
-  const userStats = await getUserStats()
+  const userStats = await getUserStats('123')
 
   return (
     <div className="container mx-auto px-4 py-8">
