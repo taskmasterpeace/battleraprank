@@ -268,18 +268,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       router.refresh();
       return { error: null };
     }
-
+  
     try {
-      const { error } = await getSupabaseBrowser().auth.signInWithPassword({ email, password })
-      if (!error) {
-        router.refresh()
+      const { data, error } = await getSupabaseBrowser().auth.signInWithPassword({
+        email,
+        password,
+      });
+  
+      if (error) {
+        console.error("❌ Sign in failed:", error);
+        return { error };
       }
-      return { error }
+  
+      // ✅ Set state from successful login
+      // setUser(data.user);
+      // setSession(data.session);
+  
+      // optional: fetch and set user profile here
+      const { data: profile } = await getSupabaseBrowser().from("user_profiles").select("*").eq("id", data.user.id).single();
+      setUserProfile(profile);
+  
+      router.refresh();
+      return { error: null };
     } catch (error) {
       console.error("Sign in failed:", error);
       return { error };
     }
-  }
+  };
+  
 
   const signUp = async (email: string, password: string, roles: UserRoles) => {
     if (MOCK_MODE) {
