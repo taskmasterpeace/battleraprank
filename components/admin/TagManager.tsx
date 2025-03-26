@@ -31,7 +31,8 @@ import { toast } from "@/hooks/use-toast"
 interface TagManagerProps {
   tags: Tag[]
   onTagsChange: (tags: Tag[]) => void
-}
+  }
+// Removed misplaced block
 
 export default function TagManager({ tags, onTagsChange }: TagManagerProps) {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
@@ -55,8 +56,27 @@ export default function TagManager({ tags, onTagsChange }: TagManagerProps) {
       return
     }
 
-    const createdTag = addTag(newTag)
-    onTagsChange([...tags, createdTag])
+    addTag(newTag).then((createdTag) => {
+      onTagsChange([...tags, createdTag])
+      setIsAddDialogOpen(false)
+      setNewTag({
+        name: "",
+        description: "",
+        category: "",
+        isHidden: false,
+      })
+
+      toast({
+        title: "Success",
+        description: "Tag added successfully",
+      })
+    }).catch(() => {
+      toast({
+        title: "Error",
+        description: "Failed to add tag",
+        variant: "destructive",
+      })
+    })
     setIsAddDialogOpen(false)
     setNewTag({
       name: "",
@@ -74,41 +94,69 @@ export default function TagManager({ tags, onTagsChange }: TagManagerProps) {
   const handleEditTag = () => {
     if (!currentTag) return
 
-    const updatedTag = updateTag(currentTag.id, {
+    updateTag(currentTag.id, {
       name: currentTag.name,
       description: currentTag.description,
       category: currentTag.category,
       isHidden: currentTag.isHidden,
+    }).then((updatedTag) => {
+      if (updatedTag) {
+        const updatedTags = tags.map((tag) => (tag.id === currentTag.id ? updatedTag : tag))
+        onTagsChange(updatedTags)
+        saveTags(updatedTags)
+
+        toast({
+          title: "Success",
+          description: "Tag updated successfully",
+        })
+      }
+    }).catch(() => {
+      toast({
+        title: "Error",
+        description: "Failed to update tag",
+        variant: "destructive",
+      })
     })
 
-    if (updatedTag) {
-      const updatedTags = tags.map((tag) => (tag.id === currentTag.id ? updatedTag : tag))
-      onTagsChange(updatedTags)
-      saveTags(updatedTags)
+    deleteTag(currentTag.id).then((success) => {
+      if (success) {
+        const updatedTags = tags.filter((tag) => tag.id !== currentTag.id)
+        onTagsChange(updatedTags)
 
+        toast({
+          title: "Success",
+          description: "Tag deleted successfully",
+        })
+      }
+    }).catch(() => {
       toast({
-        title: "Success",
-        description: "Tag updated successfully",
+        title: "Error",
+        description: "Failed to delete tag",
+        variant: "destructive",
       })
-    }
-
-    setIsEditDialogOpen(false)
-    setCurrentTag(null)
+    })
   }
 
   const handleDeleteTag = () => {
     if (!currentTag) return
 
-    const success = deleteTag(currentTag.id)
-    if (success) {
-      const updatedTags = tags.filter((tag) => tag.id !== currentTag.id)
-      onTagsChange(updatedTags)
+    deleteTag(currentTag.id).then((success) => {
+      if (success) {
+        const updatedTags = tags.filter((tag) => tag.id !== currentTag.id)
+        onTagsChange(updatedTags)
 
+        toast({
+          title: "Success",
+          description: "Tag deleted successfully",
+        })
+      }
+    }).catch(() => {
       toast({
-        title: "Success",
-        description: "Tag deleted successfully",
+        title: "Error",
+        description: "Failed to delete tag",
+        variant: "destructive",
       })
-    }
+    })
 
     setIsDeleteDialogOpen(false)
     setCurrentTag(null)
@@ -125,19 +173,25 @@ export default function TagManager({ tags, onTagsChange }: TagManagerProps) {
   }
 
   const toggleTagVisibility = (tag: Tag) => {
-    const updatedTag = updateTag(tag.id, { isHidden: !tag.isHidden })
-
-    if (updatedTag) {
-      const updatedTags = tags.map((t) => (t.id === tag.id ? updatedTag : t))
-      onTagsChange(updatedTags)
-      saveTags(updatedTags)
-
-      toast({
-        title: "Success",
-        description: `Tag is now ${updatedTag.isHidden ? "hidden" : "visible"}`,
+      updateTag(tag.id, { isHidden: !tag.isHidden }).then((updatedTag) => {
+        if (updatedTag) {
+          const updatedTags = tags.map((t) => (t.id === tag.id ? updatedTag : t))
+          onTagsChange(updatedTags)
+          saveTags(updatedTags)
+  
+          toast({
+            title: "Success",
+            description: `Tag is now ${updatedTag.isHidden ? "hidden" : "visible"}`,
+          })
+        }
+      }).catch(() => {
+        toast({
+          title: "Error",
+          description: "Failed to update tag visibility",
+          variant: "destructive",
+        })
       })
     }
-  }
 
   return (
     <div>

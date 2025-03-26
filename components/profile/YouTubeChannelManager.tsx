@@ -70,7 +70,15 @@ export default function YouTubeChannelManager({ userId, channels: initialChannel
       }
 
       const updatedChannels = [...channels, newChannel]
-      await updateUserYouTubeChannels(userId, updatedChannels)
+      const contentLinks = updatedChannels.map(channel => ({
+        ...channel,
+        userId,
+        displayName: channel.name,
+        type: "youtube" as const,
+        createdAt: new Date().toISOString(),
+        likes: 0,
+      }))
+      await updateUserYouTubeChannels(userId, contentLinks)
       setChannels(updatedChannels)
 
       toast({
@@ -107,7 +115,15 @@ export default function YouTubeChannelManager({ userId, channels: initialChannel
           : channel,
       )
 
-      await updateUserYouTubeChannels(userId, updatedChannels)
+      const contentLinks = updatedChannels.map(channel => ({
+        ...channel,
+        userId,
+        displayName: channel.name,
+        type: "youtube" as const,
+        createdAt: new Date().toISOString(),
+        likes: 0,
+      }))
+      await updateUserYouTubeChannels(userId, contentLinks)
       setChannels(updatedChannels)
 
       toast({
@@ -133,7 +149,15 @@ export default function YouTubeChannelManager({ userId, channels: initialChannel
 
     try {
       const updatedChannels = channels.filter((channel) => channel.id !== currentChannel.id)
-      await updateUserYouTubeChannels(userId, updatedChannels)
+      const contentLinks = updatedChannels.map(channel => ({
+        ...channel,
+        userId,
+        displayName: channel.name,
+        type: "youtube" as const,
+        createdAt: new Date().toISOString(),
+        likes: 0,
+      }))
+      await updateUserYouTubeChannels(userId, contentLinks)
       setChannels(updatedChannels)
 
       toast({

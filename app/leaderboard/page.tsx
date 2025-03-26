@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { getTopRaters, getTopContributors, getUserStats } from "@/lib/stats-service"
@@ -8,8 +9,8 @@ import { Trophy, Star, Award, Users } from "lucide-react"
 
 export default async function LeaderboardPage() {
   // Fetch top users by different metrics 
-  const topRaters = await getTopRaters(10)
-  const topContributors = await getTopContributors(3)
+  const topRaters = await getTopRaters()
+  const topContributors = await getTopContributors()
   const userStats = await getUserStats('123')
 
   return (
@@ -20,12 +21,12 @@ export default async function LeaderboardPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        <div className="lg:col-span-2">
+        {/* <div className="lg:col-span-2">
           <UserStatsOverview stats={userStats} />
         </div>
         <div>
           <TopContributorCards contributors={topContributors} />
-        </div>
+        </div> */}
       </div>
 
       <Tabs defaultValue="most-ratings" className="mb-8">
@@ -51,7 +52,7 @@ export default async function LeaderboardPage() {
               <CardDescription>Users who have rated the most battlers</CardDescription>
             </CardHeader>
             <CardContent>
-              <UserLeaderboard users={topRaters} metric="ratings" />
+              {/* <UserLeaderboard users={topRaters} metric="ratings" /> */}
             </CardContent>
           </Card>
         </TabsContent>
@@ -63,7 +64,7 @@ export default async function LeaderboardPage() {
               <CardDescription>Users whose ratings most closely match the community consensus</CardDescription>
             </CardHeader>
             <CardContent>
-              <UserLeaderboard users={topRaters.sort((a, b) => b.accuracyScore - a.accuracyScore)} metric="accuracy" />
+              {/* <UserLeaderboard users={topRaters.sort((a, b) => b.accuracyScore - a.accuracyScore)} metric="accuracy" /> */}
             </CardContent>
           </Card>
         </TabsContent>
@@ -75,7 +76,7 @@ export default async function LeaderboardPage() {
               <CardDescription>Users with the most followers in the community</CardDescription>
             </CardHeader>
             <CardContent>
-              <UserLeaderboard users={topRaters.sort((a, b) => b.followers - a.followers)} metric="followers" />
+              {/* <UserLeaderboard users={topRaters.sort((a, b) => b.followers - a.followers)} metric="followers" /> */}
             </CardContent>
           </Card>
         </TabsContent>

@@ -94,7 +94,14 @@ export async function getFeaturedVideos() {
 /**
  * Saves featured videos (admin only)
  */
-export async function manageFeaturedVideos(videos) {
+interface FeaturedVideo {
+  title: string
+  videoId: string
+  thumbnail?: string
+  order: number
+}
+
+export async function manageFeaturedVideos(videos: FeaturedVideo[]): Promise<boolean> {
   try {
     const supabase = createServerComponentClient({ cookies })
     

@@ -83,18 +83,18 @@ export default function UserRatingsSection({ userId }: UserRatingsSectionProps) 
                         </Link>
                         <div className="flex items-center text-sm text-gray-400 mt-1">
                           <Calendar className="w-4 h-4 mr-1" />
-                          {formatDate(rating.createdAt)}
+                          {rating.createdAt ? formatDate(rating.createdAt) : "N/A"}
                         </div>
                       </div>
 
                       <div className="flex items-center bg-amber-900/30 px-3 py-1 rounded-full">
                         <Star className="w-4 h-4 text-amber-400 fill-amber-400 mr-1" />
-                        <span className="font-bold">{rating.rating.toFixed(1)}</span>
+                        <span className="font-bold">{(rating.rating ?? 0).toFixed(1)}</span>
                       </div>
                     </div>
 
                     <div className="flex flex-wrap gap-2 mt-3">
-                      {rating.badges.positive.map((badge) => (
+                      {(rating.badges?.positive ?? []).map((badge) => (
                         <Badge
                           key={badge}
                           className="bg-green-900/30 text-green-400 border-green-700 flex items-center"
@@ -104,7 +104,7 @@ export default function UserRatingsSection({ userId }: UserRatingsSectionProps) 
                         </Badge>
                       ))}
 
-                      {rating.badges.negative.map((badge) => (
+                      {(rating.badges?.negative ?? []).map((badge) => (
                         <Badge key={badge} className="bg-red-900/30 text-red-400 border-red-700 flex items-center">
                           <XCircle className="w-3 h-3 mr-1" />
                           {badge}

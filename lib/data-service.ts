@@ -33,19 +33,17 @@ export interface Attribute {
 // Memoize function to replace React cache
 const memoizedFunctions: Record<string, { result: any, expiry: number }> = {};
 
-export function memoize<T>(fn: () => Promise<T>, key: string, expiryMs = 60000): () => Promise<T> {
-  return async () => {
-    const now = Date.now();
-    const cached = memoizedFunctions[key];
-    
-    if (cached && cached.expiry > now) {
-      return cached.result;
-    }
-    
-    const result = await fn();
-    memoizedFunctions[key] = { result, expiry: now + expiryMs };
-    return result;
-  };
+export async function memoize<T>(fn: () => Promise<T>, key: string, expiryMs = 60000): Promise<T> {
+  const now = Date.now();
+  const cached = memoizedFunctions[key];
+  
+  if (cached && cached.expiry > now) {
+    return cached.result;
+  }
+  
+  const result = await fn();
+  memoizedFunctions[key] = { result, expiry: now + expiryMs };
+  return result;
 }
 
 // Fetch writing badges

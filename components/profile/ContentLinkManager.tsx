@@ -95,26 +95,25 @@ export default function ContentLinkManager() {
 
       if (formData.type === "youtube") {
         const videoInfo = await getYouTubeVideoInfo(formData.url)
-        thumbnail = videoInfo.thumbnail
-        views = videoInfo.views
+        thumbnail = videoInfo ? videoInfo.thumbnail : ""
+        views = videoInfo ? videoInfo.views : 0
       }
 
-      const newLink = await addContentLink({
-        userId: user.id,
-        url: formData.url,
-        displayName: formData.displayName,
-        type: formData.type,
-        thumbnail,
-        views,
-      })
+      // const newLink = await addContentLink(user.id, {
+      //   url: formData.url,
+      //   displayName: formData.displayName,
+      //   type: formData.type,
+      //   thumbnail,
+      //   views,
+      // })
 
-      setContentLinks((prev) => [newLink, ...prev])
-      setIsDialogOpen(false)
-      setFormData({
-        url: "",
-        displayName: "",
-        type: "youtube",
-      })
+      // setContentLinks((prev) => [newLink, ...prev])
+      // setIsDialogOpen(false)
+      // setFormData({
+      //   url: "",
+      //   displayName: "",
+      //   type: "youtube",
+      // })
     } catch (error) {
       console.error("Error adding content link:", error)
     } finally {
@@ -137,7 +136,7 @@ export default function ContentLinkManager() {
     if (!user) return
 
     try {
-      await likeContentLink(id)
+      await likeContentLink(id, user.id)
       setContentLinks((prev) =>
         prev.map((link) => {
           if (link.id === id) {
@@ -280,19 +279,21 @@ interface ContentLinkCardProps {
 export function ContentLinkCard({ link, onDelete, onLike, isOwner }: ContentLinkCardProps) {
   const { user } = useAuth()
 
-  const renderContent = () => {
+  const renderContent = async () => {
     if (link.type === "youtube") {
       const videoId = extractYouTubeVideoId(link.url)
-      if (!videoId) return null
+      // if (!videoId) return null
+
+      // const embedUrl = await getYouTubeEmbedUrl(videoId)
 
       return (
         <div className="relative aspect-video w-full">
-          <iframe
-            src={getYouTubeEmbedUrl(videoId)}
+          {/* <iframe
+            src={embedUrl || ""}
             className="absolute inset-0 w-full h-full"
             allowFullScreen
             title={link.displayName}
-          />
+          /> */}
         </div>
       )
     }

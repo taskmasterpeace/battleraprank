@@ -1,9 +1,24 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Star, Users, Award, TrendingUp } from "lucide-react"
-import type { CommunityStats } from "@/types/stats-types"
+import type { CommunityStats, UserStats } from "@/types/stats-types"
 
 interface UserStatsOverviewProps {
-  stats: CommunityStats
+  stats: {
+    totalUsers: number;
+    newUsersThisWeek: number;
+    totalRatings: number;
+    newRatingsThisWeek: number;
+    averageRating: number;
+    activeUsers: number;
+    roleBreakdown: {
+      role: string;
+      percentage: number;
+    }[];
+    ratingDistribution: {
+      range: string;
+      percentage: number;
+    }[];
+  }
 }
 
 export default function UserStatsOverview({ stats }: UserStatsOverviewProps) {

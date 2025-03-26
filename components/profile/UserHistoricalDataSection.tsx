@@ -68,19 +68,7 @@ export default function UserHistoricalDataSection({ userId }: UserHistoricalData
               <CardDescription>Historical activity data over time</CardDescription>
             </CardHeader>
             <CardContent>
-              <ChartContainer
-                config={{
-                  ratings: {
-                    label: "Ratings Submitted",
-                    color: "hsl(var(--chart-1))",
-                  },
-                  comments: {
-                    label: "Comments",
-                    color: "hsl(var(--chart-2))",
-                  },
-                }}
-                className="h-[300px]"
-              >
+              <ChartContainer className="h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={historicalData.activity}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
@@ -92,7 +80,7 @@ export default function UserHistoricalDataSection({ userId }: UserHistoricalData
                       }
                     />
                     <YAxis stroke="hsl(var(--muted-foreground))" />
-                    <ChartTooltip content={<ChartTooltipContent />} />
+                    {/* <ChartTooltip content={(props) => <ChartTooltipContent {...props} />} /> */}
                     <Legend />
                     <Line type="monotone" dataKey="ratings" stroke="var(--color-ratings)" activeDot={{ r: 8 }} />
                     <Line type="monotone" dataKey="comments" stroke="var(--color-comments)" />
@@ -110,19 +98,7 @@ export default function UserHistoricalDataSection({ userId }: UserHistoricalData
               <CardDescription>How your ratings have changed over time</CardDescription>
             </CardHeader>
             <CardContent>
-              <ChartContainer
-                config={{
-                  average: {
-                    label: "Average Rating",
-                    color: "hsl(var(--chart-1))",
-                  },
-                  consistency: {
-                    label: "Consistency Score",
-                    color: "hsl(var(--chart-2))",
-                  },
-                }}
-                className="h-[300px]"
-              >
+              <ChartContainer className="h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={historicalData.ratingTrends}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
@@ -134,7 +110,7 @@ export default function UserHistoricalDataSection({ userId }: UserHistoricalData
                       }
                     />
                     <YAxis stroke="hsl(var(--muted-foreground))" />
-                    <ChartTooltip content={<ChartTooltipContent />} />
+                    {/* <ChartTooltip content={(props) => <ChartTooltipContent {...props} />} /> */}
                     <Legend />
                     <Line type="monotone" dataKey="average" stroke="var(--color-average)" activeDot={{ r: 8 }} />
                     <Line type="monotone" dataKey="consistency" stroke="var(--color-consistency)" />

@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { getBattlers, getAllBadges, getAttributes } from "@/lib/data-service"
 import { Users, Tag, BarChart, TrendingUp, UserPlus, Settings, ShieldCheck } from "lucide-react"

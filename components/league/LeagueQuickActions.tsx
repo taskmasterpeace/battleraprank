@@ -46,7 +46,7 @@ export default function LeagueQuickActions() {
 
   const filteredEvents = events.filter((event) => event.status === activeTab)
 
-  if (!user || !user.roles?.league_owner) {
+  if (!user || user.role !== 'league_owner') {
     return null
   }
 

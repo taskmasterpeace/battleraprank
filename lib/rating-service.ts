@@ -140,7 +140,8 @@ async function recalculateWeightedAverage(
         (role) => userData.roles[role],
       ) as UserRole
 
-      const weight = getRoleWeights()[userRole] || 1
+      const roleWeights = await getRoleWeights()
+      const weight = roleWeights[userRole] || 1
       weightedSum += rating.value * weight
       weightSum += weight
     }
@@ -365,11 +366,11 @@ export async function getUserRatings(userId: string): Promise<UserRating[]> {
       id: rating.id,
       rating: rating.value,
       battlerId: rating.battlerId,
-      battlerName: rating.battlers?.name || "Unknown Battler",
+      battlerName: Array.isArray(rating.battlers) || !rating.battlers ? "Unknown Battler" : (rating.battlers as { name: string }).name || "Unknown Battler",
       category: rating.category,
       attribute: rating.attribute,
-      createdAt: new Date(rating.createdAt),
-      updatedAt: new Date(rating.updatedAt)
+      createdAt: rating.createdAt,
+      updatedAt: rating.updatedAt
     })) as UserRating[]
   } catch (error) {
     console.error("Error fetching user ratings:", error)

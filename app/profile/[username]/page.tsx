@@ -88,13 +88,13 @@ export default async function UserProfilePage({ params }: { params: { username: 
             )}
           </TabsList>
 
-          <TabsContent value="videos">
+          {/* <TabsContent value="videos">
             {user.youtubeChannels && user.youtubeChannels.length > 0 ? (
               <YouTubeVideoSection channels={user.youtubeChannels} />
             ) : (
               <div className="text-center py-12 text-gray-400">No YouTube channels have been added yet.</div>
             )}
-          </TabsContent>
+          </TabsContent> */}
 
           <TabsContent value="content">
             <MediaContentSection userId={user.id} username={params.username} />
@@ -126,9 +126,9 @@ export default async function UserProfilePage({ params }: { params: { username: 
                 </div>
               </div>
 
-              <div>
+              {/* <div>
                 <SocialLinksSection userId={user.id} socialLinks={user.socialLinks} />
-              </div>
+              </div> */}
             </div>
           </TabsContent>
 
@@ -209,9 +209,9 @@ export default async function UserProfilePage({ params }: { params: { username: 
                 </div>
               </div>
 
-              <div>
+              {/* <div>
                 <SocialLinksSection userId={user.id} socialLinks={user.socialLinks} />
-              </div>
+              </div> */}
             </div>
           </TabsContent>
 
@@ -260,13 +260,13 @@ export default async function UserProfilePage({ params }: { params: { username: 
             <div className="text-center py-12 text-gray-400">League events coming soon</div>
           </TabsContent>
 
-          <TabsContent value="videos">
+          {/* <TabsContent value="videos">
             {user.youtubeChannels && user.youtubeChannels.length > 0 ? (
               <YouTubeVideoSection channels={user.youtubeChannels} />
             ) : (
               <div className="text-center py-12 text-gray-400">No YouTube channels have been added yet.</div>
             )}
-          </TabsContent>
+          </TabsContent> */}
 
           <TabsContent value="roster">
             <div className="text-center py-12 text-gray-400">League roster coming soon</div>
@@ -292,9 +292,9 @@ export default async function UserProfilePage({ params }: { params: { username: 
                 </div>
               </div>
 
-              <div>
+              {/* <div>
                 <SocialLinksSection userId={user.id} socialLinks={user.socialLinks} />
-              </div>
+              </div> */}
             </div>
           </TabsContent>
 
@@ -354,9 +354,9 @@ export default async function UserProfilePage({ params }: { params: { username: 
                 </div>
               </div>
 
-              <div>
+              {/* <div>
                 <SocialLinksSection userId={user.id} socialLinks={user.socialLinks} />
-              </div>
+              </div> */}
             </div>
           </TabsContent>
 

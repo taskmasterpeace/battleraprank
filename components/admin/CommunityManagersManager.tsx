@@ -48,7 +48,11 @@ export default function CommunityManagersManager() {
 
     try {
       const newManager = await addCommunityManager(email)
-      setManagers((prev) => [...prev, newManager])
+      // if (newManager && typeof newManager === "object" && newManager !== null) {
+      //   setManagers((prev) => [...prev, newManager])
+      // } else {
+      //   setError("Failed to add community manager. Invalid response.")
+      // }
       setIsDialogOpen(false)
       setEmail("")
       setSuccess(`${email} has been added as a community manager`)
@@ -77,7 +81,7 @@ export default function CommunityManagersManager() {
   const filteredManagers = searchQuery
     ? managers.filter(
         (manager) =>
-          manager.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (manager.displayName?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false) ||
           manager.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
           (manager.username && manager.username.toLowerCase().includes(searchQuery.toLowerCase())),
       )

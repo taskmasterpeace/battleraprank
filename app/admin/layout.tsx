@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import type React from "react"
 import { redirect } from "next/navigation"
 import AdminSidebar from "@/components/admin/AdminSidebar"

@@ -35,11 +35,11 @@ export default function UserBadgeManager({ users, filter }: UserBadgeManagerProp
   const [customBadge, setCustomBadge] = useState("")
 
   // Filter users based on search query
-  const filteredUsers = users.filter(
-    (user) =>
-      user.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.username.toLowerCase().includes(searchQuery.toLowerCase()),
-  )
+  // const filteredUsers = users.filter(
+  //   (user) =>
+  //     user.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+  //     user.username.toLowerCase().includes(searchQuery.toLowerCase()),
+  // )
 
   const handleOpenBadgeDialog = (user: UserProfile) => {
     setSelectedUser(user)
@@ -103,7 +103,7 @@ export default function UserBadgeManager({ users, filter }: UserBadgeManagerProp
         </div>
       </div>
 
-      <div className="space-y-4">
+      {/* <div className="space-y-4">
         {filteredUsers.length === 0 ? (
           <div className="text-center py-8 text-gray-400">No users found matching your search criteria</div>
         ) : (
@@ -144,7 +144,7 @@ export default function UserBadgeManager({ users, filter }: UserBadgeManagerProp
             </div>
           ))
         )}
-      </div>
+      </div> */}
 
       {/* Badge Management Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

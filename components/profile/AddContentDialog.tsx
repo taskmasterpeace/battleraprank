@@ -24,7 +24,7 @@ interface AddContentDialogProps {
 
 export default function AddContentDialog({ open, onOpenChange, userId, onContentAdded }: AddContentDialogProps) {
   const router = useRouter()
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<Partial<MediaContent>>({
     title: "",
     description: "",
     url: "",
@@ -39,7 +39,7 @@ export default function AddContentDialog({ open, onOpenChange, userId, onContent
   }
 
   const handleSelectChange = (value: string) => {
-    setFormData((prev) => ({ ...prev, type: value }))
+    setFormData((prev) => ({ ...prev, type: value as "video" | "article" | "podcast" }))
   }
 
   const handleThumbnailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {

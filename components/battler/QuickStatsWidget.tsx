@@ -40,14 +40,19 @@ export default function QuickStatsWidget() {
       setIsLoading(false)
     }
 
-    if (user && user.roles?.battler) {
+    if (user ) {
       fetchStats()
     }
   }, [user])
 
-  if (!user || !user.roles?.battler || isLoading) {
-    return null
-  }
+  //   if (user && user.roles?.battler) {
+  //     fetchStats()
+  //   }
+  // }, [user])
+
+  // if (!user || !user.roles?.battler || isLoading) {
+  //   return null
+  // }
 
   return (
     <Card className="bg-gray-900 border-gray-800">
@@ -63,7 +68,7 @@ export default function QuickStatsWidget() {
             </div>
             <div className="flex items-center">
               <span className="text-2xl font-bold">{stats?.averageRating.toFixed(1)}</span>
-              <div
+              {/* <div
                 className={`ml-2 flex items-center text-xs ${stats?.ratingChange >= 0 ? "text-green-400" : "text-red-400"}`}
               >
                 {stats?.ratingChange >= 0 ? (
@@ -72,7 +77,7 @@ export default function QuickStatsWidget() {
                   <TrendingDown className="h-3 w-3 mr-1" />
                 )}
                 {Math.abs(stats?.ratingChange || 0).toFixed(1)}
-              </div>
+              </div> */}
             </div>
           </div>
 
