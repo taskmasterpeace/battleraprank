@@ -1,3 +1,5 @@
+import { Youtube } from "lucide-react"
+
 export interface UserRoles {
   fan: boolean
   media: boolean
@@ -5,7 +7,7 @@ export interface UserRoles {
   league_owner: boolean
   admin: boolean
   community_manager: boolean
-  media_confirmed: boolean
+  media_confirmed?: boolean
 }export type UserRole = "fan" | "media" | "battler" | "league_owner" | "admin" | "community_manager"
 
 export interface RoleWeight {
@@ -76,4 +78,14 @@ export interface ContentLink {
   createdAt: string
   likes: number
   views?: number
+}
+
+export interface YouTubeChannel {
+  id: string
+  url: string
+  name: string
+  description?: string
+  subscriberCount?: number
+  videoCount?: number
+  viewCount?: number
 }

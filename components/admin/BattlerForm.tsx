@@ -52,7 +52,7 @@ export default function BattlerForm({ battler }: BattlerFormProps) {
       try {
         // Check if user is a community manager or admin
         const isCM = await isCommunityManager(user.id)
-        setIsAuthorized(isCM || user.roles?.admin)
+        setIsAuthorized(isCM || user.role === "admin")
       } catch (error) {
         console.error("Error checking authorization:", error)
         setIsAuthorized(false)
@@ -120,7 +120,7 @@ export default function BattlerForm({ battler }: BattlerFormProps) {
 
         // Update the user's addedBattlers array
         if (user) {
-          await updateUserAddedBattler(user.id, newBattler.id)
+          await updateUserAddedBattler(user.id)
         }
       }
 

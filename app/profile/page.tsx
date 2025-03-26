@@ -45,7 +45,7 @@ export default function ProfilePage() {
           // Fetch user profile to get YouTube channels
           const userProfile = await getUserByUsername(username)
           if (userProfile) {
-            setYoutubeChannels(userProfile.youtubeChannels || [])
+            // setYoutubeChannels(userProfile.youtubeChannels || [])
           }
         } catch (error) {
           console.error("Error fetching user data:", error)
@@ -186,9 +186,9 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {user.roles?.battler && <QuickStatsWidget />}
+          {/* {user.roles?.battler && <QuickStatsWidget />}
 
-          {user.roles?.league_owner && <LeagueQuickActions />}
+          {user.roles?.league_owner && <LeagueQuickActions />} */}
         </TabsContent>
 
         <TabsContent value="youtube">

@@ -31,7 +31,7 @@ export default function BadgesSection() {
     <div className="bg-slate-800 rounded-lg p-6">
       <h2 className="text-2xl font-bold mb-4">Badges</h2>
       <div className="grid md:grid-cols-2 gap-6">
-        <BadgeColumn
+        {/* <BadgeColumn
           title="Positive Badges"
           badges={positiveBadges}
           selectedBadges={selectedPositive}
@@ -44,32 +44,39 @@ export default function BadgesSection() {
           selectedBadges={selectedNegative}
           onToggle={(badge) => toggleBadge(badge, false)}
           icon={<XCircle className="w-4 h-4 text-red-500" />}
-        />
+        /> */}
       </div>
     </div>
   )
 }
 
-function BadgeColumn({ title, badges, selectedBadges, onToggle, icon }) {
+// function BadgeColumn({ title, badges, selectedBadges, onToggle, icon }) {
+//   return (
+//     <div>
+//       <h3 className="text-lg font-semibold mb-2 flex items-center">
+//         {icon}
+//         <span className="ml-2">{title}</span>
+//         <Badge variant="secondary" className="ml-2">{selectedBadges.length}</Badge>
+//       </h3>
+//       <div className="grid grid-cols-2 gap-2">
+//         {badges.map((badge) => (
+//           <Badge
+//             key={badge}
+//             variant={selectedBadges.includes(badge) ? 'default' : 'outline'}
+//             className="cursor-pointer"
+//             onClick={() => onToggle(badge)}
+//           >
+//             {badge}
+//           </Badge>
+//         ))}
+//       </div>
+//     </div>
+//   )
+// }
+function BadgeColumn(){
   return (
     <div>
-      <h3 className="text-lg font-semibold mb-2 flex items-center">
-        {icon}
-        <span className="ml-2">{title}</span>
-        <Badge variant="secondary" className="ml-2">{selectedBadges.length}</Badge>
-      </h3>
-      <div className="grid grid-cols-2 gap-2">
-        {badges.map((badge) => (
-          <Badge
-            key={badge}
-            variant={selectedBadges.includes(badge) ? 'default' : 'outline'}
-            className="cursor-pointer"
-            onClick={() => onToggle(badge)}
-          >
-            {badge}
-          </Badge>
-        ))}
-      </div>
+      Hello world
     </div>
   )
 }

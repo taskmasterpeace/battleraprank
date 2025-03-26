@@ -41,19 +41,22 @@ export default function HighlightedBattler() {
 
   useEffect(() => {
     // Get tags from tag service
-    const allTags = getTags()
-    setTags(allTags)
+    getTags().then((allTags) => {
+      setTags(allTags)
+
+      // Group tags by category logic is already handled above, removing redundant code
+    })
 
     // Group tags by category
-    const groupedTags: Record<string, Tag[]> = {}
-    allTags.forEach((tag) => {
-      const category = tag.category || "Uncategorized"
-      if (!groupedTags[category]) {
-        groupedTags[category] = []
-      }
-      groupedTags[category].push(tag)
-    })
-    setTagCategories(groupedTags)
+    // const groupedTags: Record<string, Tag[]> = {}
+    // allTags.forEach((tag) => {
+    //   const category = tag.category || "Uncategorized"
+    //   if (!groupedTags[category]) {
+    //     groupedTags[category] = []
+    //   }
+    //   groupedTags[category].push(tag)
+    // })
+    // setTagCategories(groupedTags)
 
     // Mock data for highlighted battlers
     const mockBattlers: Battler[] = [

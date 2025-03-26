@@ -1,13 +1,14 @@
 "use client"
-
+export const dynamic = "force-dynamic";
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { useRouter, useSearchParams } from "next/navigation"
+import { Suspense } from "react"
+import ErrorHandler from "./ErrorHandler"
+
 
 export default function ErrorPage() {
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const errorMessage = searchParams.get("message") || "An error occurred during authentication"
 
   return (
     <div className="flex items-center justify-center min-h-[calc(100vh-64px)]">
@@ -23,19 +24,19 @@ export default function ErrorPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="text-center">
-            <div className="p-3 text-sm bg-red-900/30 border border-red-800 text-red-400 rounded-md mb-4">
-              {errorMessage}
-            </div>
-            
+            <Suspense fallback={<div>Loading error...</div>}>
+              <ErrorHandler />
+            </Suspense>
+
             <div className="flex justify-center mt-4">
-              <Button 
-                variant="default" 
+              <Button
+                variant="default"
                 onClick={() => router.push("/auth/login")}
                 className="mx-2"
               >
                 Back to Login
               </Button>
-              <Button 
+              <Button
                 variant="outline"
                 onClick={() => router.push("/")}
                 className="mx-2"

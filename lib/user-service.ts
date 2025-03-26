@@ -577,3 +577,388 @@ export async function removeAdmin(userId: string): Promise<void> {
     throw new Error(error.message || "Error removing admin")
   }
 }
+
+// Stuffs I added
+
+/**
+ * Get users by username
+ */
+
+export async function getUserByUsername(username: string): Promise<UserProfile | null> {
+  try {
+    const supabase = createServerComponentClient({ cookies });
+
+    // Get the current user
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("You must be logged in to view user profiles");
+
+    // Get current user's profile
+    const { data: currentProfile, error: profileError } = await supabase
+      .from("user_profiles")
+      .select("email, roles")
+      .eq("id", user.id)
+      .single();
+
+    if (profileError || !currentProfile) {
+      throw new Error("Error fetching your profile");
+    }
+
+    const isTaskmasterpeace = currentProfile.email?.toLowerCase() === "taskmasterpeace@gmail.com";
+    const isAdmin = currentProfile.roles?.admin === true;
+
+    if (!isTaskmasterpeace && !isAdmin) {
+      throw new Error("Only taskmasterpeace and admins can access user profiles by username");
+    }
+
+    // Query user by username
+    const { data, error } = await supabase
+      .from("user_profiles")
+      .select("*")
+      .eq("username", username)
+      .single();
+
+    if (error) {
+      throw new Error("User not found");
+    }
+
+    return data as UserProfile;
+  } catch (error: any) {
+    console.error("Error getting user by username:", error.message || error);
+    throw new Error(error.message || "Failed to fetch user by username");
+  }
+}
+
+/**
+ * is community manager
+ */
+export async function isCommunityManager(userId: string): Promise<boolean> {
+  try {
+    const supabase = createServerComponentClient({ cookies })
+    
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .select('roles')
+      .eq('id', userId)
+      .single()
+    
+    return !!data?.roles?.community_manager && !error
+  }
+  catch (error) { 
+    console.error('Error checking if community manager:', error)
+    return false
+  }
+}
+
+/**
+ * user added battler
+ */
+export async function updateUserAddedBattler(userId: string): Promise<boolean> {
+  try {
+    const supabase = createServerComponentClient({ cookies })
+    
+    const { data, error } = await supabase
+      .from('battlers')
+      .select('*')
+      .eq('user_id', userId)
+    
+    return !!data && !error
+  }
+  catch (error) {
+    console.error('Error checking if user added battler:', error)
+    return false
+  }
+}
+
+/**
+ * Get community manager requests
+ */
+export async function getCommunityManagerRequests() {
+  try {
+    const supabase = createServerComponentClient({ cookies })
+    
+    const { data, error } = await supabase
+      .from('community_manager_requests')
+      .select('*')
+    
+    if (error) {
+      console.error('Error fetching community manager requests:', error)
+      return []
+    }
+    
+    return data as []
+  } catch (error) {
+    console.error('Error fetching community manager requests:', error)
+    return []
+  }
+}
+
+/**
+ * Review community manager request
+ */
+export async function reviewCommunityManagerRequest(  
+  requestId: string,
+  status: "approved" | "rejected",
+  reviewedBy: string,
+) {
+  try {
+    const supabase = createServerComponentClient({ cookies })
+    
+    const { error } = await supabase
+      .from('community_manager_requests')
+      .update({ status, reviewed_at: new Date().toISOString(), reviewed_by: reviewedBy })
+      .eq('id', requestId)
+    
+    if (error) {
+      console.error('Error reviewing community manager request:', error)
+      throw new Error('Failed to review request')
+    }
+  } catch (error) {
+    console.error('Error reviewing community manager request:', error)
+    throw new Error('Failed to review request')
+  }
+}
+
+/**
+ * Add community manager
+ */
+export async function addCommunityManager(userId: string) {
+  try {
+    const supabase = createServerComponentClient({ cookies })
+    
+    const { error } = await supabase
+      .from('user_profiles')
+      .update({ roles: { community_manager: true } })
+      .eq('id', userId)
+    
+    if (error) {
+      console.error('Error adding community manager:', error)
+      throw new Error('Failed to add community manager')
+    }
+  } catch (error) {
+    console.error('Error adding community manager:', error)
+    throw new Error('Failed to add community manager')
+  }
+}
+
+/**
+ * Remove community manager
+ */
+export async function removeCommunityManager(userId: string) {
+  try {
+    const supabase = createServerComponentClient({ cookies })
+    
+    const { error } = await supabase
+      .from('user_profiles')
+      .update({ roles: { community_manager: false } })
+      .eq('id', userId)
+    
+    if (error) {
+      console.error('Error removing community manager:', error)
+      throw new Error('Failed to remove community manager')
+    }
+  } catch (error) {
+    console.error('Error removing community manager:', error)
+    throw new Error('Failed to remove community manager')
+  }
+}
+
+/**
+ * Request community manager role
+ */
+export async function requestCommunityManagerRole(userId: string, reason: string) {
+  try {
+    const supabase = createServerComponentClient({ cookies })
+    
+    const { error } = await supabase
+      .from('community_manager_requests')
+      .insert({ user_id: userId, reason })
+    
+    if (error) {
+      console.error('Error requesting community manager role:', error)
+      throw new Error('Failed to submit request')
+    }
+  } catch (error) {
+    console.error('Error requesting community manager role:', error)
+    throw new Error('Failed to submit request')
+  }
+}
+
+/**
+ * Update user profiles
+ */
+export async function updateUserProfile(userId: string, profile: Partial<UserProfile>): Promise<UserProfile> {
+  try {
+    const supabase = createServerComponentClient({ cookies })
+    
+    const { error } = await supabase
+      .from('user_profiles')
+      .update(profile)
+      .eq('id', userId)
+    
+    if (error) {
+      console.error('Error updating user profile:', error)
+      throw new Error('Failed to update profile')
+    }
+    
+    return profile as UserProfile
+  } catch (error) {
+    console.error('Error updating user profile:', error)
+    throw new Error('Failed to update profile')
+  }
+}
+
+/**
+ * Get added battlers
+ */
+export async function getUserAddedBattlers(userId: string): Promise<any> {
+  try {
+    const supabase = createServerComponentClient({ cookies })
+    
+    const { data, error } = await supabase
+      .from('battlers')
+      .select('*')
+      .eq('user_id', userId)
+    
+    if (error) {
+      console.error('Error fetching user added battlers:', error)
+      return []
+    }
+    
+    return data || []
+  } catch (error) {
+    console.error('Error fetching user added battlers:', error)
+    return []
+  }
+}
+
+/**
+ * update user Youtube channels
+ */
+export async function updateUserYouTubeChannels(userId: string, channels: ContentLink[]) {
+  try {
+    const supabase = createServerComponentClient({ cookies })
+    
+    const { error } = await supabase
+      .from('user_profiles')
+      .update({ youtube_channels: channels })
+      .eq('id', userId)
+    
+    if (error) {
+      console.error('Error updating user Youtube channels:', error)
+      throw new Error('Failed to update Youtube channels')
+    }
+  } catch (error) {
+    console.error('Error updating user Youtube channels:', error)
+    throw new Error('Failed to update Youtube channels')
+  }
+}
+
+/**
+ * add a content link
+ */
+export async function addContentLink(userId: string, link: ContentLink) {
+  try {
+    const supabase = createServerComponentClient({ cookies })
+    
+    const { error } = await supabase
+      .from('content_links')
+      .insert({ ...link, user_id: userId })
+    
+    if (error) {
+      console.error('Error adding content link:', error)
+      throw new Error('Failed to add content link')
+    }
+  } catch (error) {
+    console.error('Error adding content link:', error)
+    throw new Error('Failed to add content link')
+  }
+}
+
+/**
+ * delete a content link
+ */
+export async function deleteContentLink(linkId: string) {
+  try {
+    const supabase = createServerComponentClient({ cookies })
+    
+    const { error } = await supabase
+      .from('content_links')
+      .delete()
+      .eq('id', linkId)
+    
+    if (error) {
+      console.error('Error deleting content link:', error)
+      throw new Error('Failed to delete content link')
+    }
+  } catch (error) {
+    console.error('Error deleting content link:', error)
+    throw new Error('Failed to delete content link')
+  }
+}
+
+/**
+ * get user content links
+ */
+export async function getUserContentLinks(userId: string): Promise<ContentLink[]> {
+  try {
+    const supabase = createServerComponentClient({ cookies })
+    
+    const { data, error } = await supabase
+      .from('content_links')
+      .select('*')
+      .eq('user_id', userId)
+    
+    if (error) {
+      console.error('Error getting user content links:', error)
+      return []
+    }
+    
+    return data as ContentLink[]
+  } catch (error) {
+    console.error('Error getting user content links:', error)
+    return []
+  }
+}
+
+/**
+ * like a content link
+ */
+export async function likeContentLink(linkId: string, userId: string) {
+  try {
+    const supabase = createServerComponentClient({ cookies })
+    
+    const { error } = await supabase
+      .from('content_link_likes')
+      .insert({ link_id: linkId, user_id: userId })
+    
+    if (error) {
+      console.error('Error liking content link:', error)
+      throw new Error('Failed to like content link')
+    }
+  } catch (error) {
+    console.error('Error liking content link:', error)
+    throw new Error('Failed to like content link')
+  }
+}
+
+/**
+ * update user social link
+ */
+export async function updateUserSocialLinks(userId: string, links: SocialLinks) {
+  try {
+    const supabase = createServerComponentClient({ cookies })
+    
+    const { error } = await supabase
+      .from('user_profiles')
+      .update({ social_links: links })
+      .eq('id', userId)
+    
+    if (error) {
+      console.error('Error updating user social links:', error)
+      throw new Error('Failed to update social links')
+    }
+  } catch (error) {
+    console.error('Error updating user social links:', error)
+    throw new Error('Failed to update social links')
+  }
+}

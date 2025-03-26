@@ -45,7 +45,7 @@ export default function RatingSection() {
   )
 }
 
-function AttributeSlider({ label, value, onChange, description }) {
+function AttributeSlider({ label, value, onChange, description }: { label: string; value: number; onChange: (value: number) => void; description: string }) {
   return (
     <div>
       <div className="flex justify-between mb-2">

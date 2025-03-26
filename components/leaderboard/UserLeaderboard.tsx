@@ -151,7 +151,7 @@ export default function UserLeaderboard() {
             ) : (
               <div className="space-y-2">
                 {filteredLeaderboard
-                  .sort((a, b) => b.consistency - a.consistency)
+                  .sort((a, b) => (b.consistency ?? 0) - (a.consistency ?? 0))
                   .map((entry, index) => (
                     <div
                       key={entry.userId}
@@ -196,7 +196,7 @@ export default function UserLeaderboard() {
             ) : (
               <div className="space-y-2">
                 {filteredLeaderboard
-                  .sort((a, b) => b.influence - a.influence)
+                  .sort((a, b) => (b.influence ?? 0) - (a.influence ?? 0))
                   .map((entry, index) => (
                     <div
                       key={entry.userId}

@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { getBattlerById } from "@/lib/data-service"
 import BattlerForm from "@/components/admin/BattlerForm"
 

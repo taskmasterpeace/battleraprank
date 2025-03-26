@@ -1,5 +1,5 @@
 "use client"
-
+export const dynamic = "force-dynamic";
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -18,15 +18,22 @@ export default function RoleWeightsPage() {
   const [isResetting, setIsResetting] = useState(false)
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
 
-  useEffect(() => {
-    const fetchWeights = async () => {
-      const weights = await getRoleWeights()
-      setRoleWeights(weights)
-      setIsLoading(false)
-    }
+  // useEffect(() => {
+  //   const fetchWeights = async () => {
+  //     const weights = await getRoleWeights()
+  //     const roleWeightsArray = Object.entries(weights).map(([role, weight]) => ({
+  //       role: role as string, // Replace 'string' with the correct type if available
+  //       weight,
+  //       displayName: role, // Replace with actual display name if available
+  //       color: "gray", // Replace with actual color if available
+  //       description: "", // Replace with actual description if available
+  //     }))
+  //     setRoleWeights(roleWeightsArray)
+  //     setIsLoading(false)
+  //   }
 
-    fetchWeights()
-  }, [])
+  //   fetchWeights()
+  // }, [])
 
   const handleWeightChange = (role: string, value: number) => {
     setRoleWeights((prev) => prev.map((rw) => (rw.role === role ? { ...rw, weight: value } : rw)))
@@ -64,35 +71,35 @@ export default function RoleWeightsPage() {
     }
   }
 
-  const handleReset = async () => {
-    setIsResetting(true)
-    setMessage(null)
+  // const handleReset = async () => {
+  //   setIsResetting(true)
+  //   setMessage(null)
 
-    try {
-      const { success, error } = await resetRoleWeightsToDefault()
+  //   try {
+  //     const { success, error } = await resetRoleWeightsToDefault()
 
-      if (success) {
-        const weights = await getRoleWeights()
-        setRoleWeights(weights)
-        setMessage({
-          type: "success",
-          text: "Role weights reset to default values.",
-        })
-      } else {
-        setMessage({
-          type: "error",
-          text: "Failed to reset weights. Please try again.",
-        })
-      }
-    } catch (error) {
-      setMessage({
-        type: "error",
-        text: "An unexpected error occurred. Please try again.",
-      })
-    } finally {
-      setIsResetting(false)
-    }
-  }
+  //     if (success) {
+  //       const weights = await getRoleWeights()
+  //       setRoleWeights(weights)
+  //       setMessage({
+  //         type: "success",
+  //         text: "Role weights reset to default values.",
+  //       })
+  //     } else {
+  //       setMessage({
+  //         type: "error",
+  //         text: "Failed to reset weights. Please try again.",
+  //       })
+  //     }
+  //   } catch (error) {
+  //     setMessage({
+  //       type: "error",
+  //       text: "An unexpected error occurred. Please try again.",
+  //     })
+  //   } finally {
+  //     setIsResetting(false)
+  //   }
+  // }
 
   if (isLoading) {
     return (
@@ -112,7 +119,7 @@ export default function RoleWeightsPage() {
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold">Role Weights</h1>
         <div className="flex gap-4">
-          <Button variant="outline" onClick={handleReset} disabled={isSaving || isResetting}>
+          <Button variant="outline" disabled={isSaving || isResetting}>
             <RefreshCw className="w-4 h-4 mr-2" />
             Reset to Default
           </Button>

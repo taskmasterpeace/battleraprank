@@ -178,3 +178,26 @@ export async function getTagCategories(): Promise<string[]> {
     return []
   }
 }
+
+// Stuffs I added
+// save tags
+export async function saveTags(tags: Tag[]): Promise<boolean> {
+  try {
+    const supabase = createServerComponentClient({ cookies })
+    
+    const { error } = await supabase
+      .from('tags')
+      .upsert(tags)
+    
+    if (error) {
+      console.error('Error saving tags:', error)
+      return false
+    }
+    
+    return true
+  } catch (error) {
+    console.error('Error saving tags:', error)
+    return false
+  }
+}
+

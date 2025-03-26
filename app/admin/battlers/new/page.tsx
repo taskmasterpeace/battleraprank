@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import BattlerForm from "@/components/admin/BattlerForm"
 
 export default function NewBattlerPage() {

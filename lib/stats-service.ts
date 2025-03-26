@@ -2,7 +2,8 @@
 
 import { createServerComponentClient } from "@supabase/auth-helpers-nextjs"
 import { cookies } from "next/headers"
-import { formatDistanceToNow } from "date-fns"
+import { formatDistanceToNow } from "date-fns";
+
 
 export interface UserStats {
   totalRatings: number;
@@ -154,7 +155,7 @@ export async function getUserActivity(userId: string, limit = 10): Promise<any[]
       value: rating.value,
       category: rating.category,
       createdAt: rating.createdAt,
-      timeAgo: formatDistanceToNow(new Date(rating.createdAt), { addSuffix: true })
+      // timeAgo: formatDistanceToNow(new Date(rating.createdAt), { addSuffix: true })
     }))
   } catch (error) {
     console.error("Error in getUserActivity:", error)
@@ -253,5 +254,109 @@ export async function getUserCategoryDistribution(userId: string): Promise<any> 
   } catch (error) {
     console.error("Error in getUserCategoryDistribution:", error)
     return {}
+  }
+}
+
+//Get top contributors
+export async function getTopContributors(): Promise<any[]> {
+  try {
+    const supabase = createServerComponentClient({ cookies })
+    
+    const { data, error } = await supabase
+      .from("ratings")
+      .select("userId, users!inner(name), count:count(*)")
+      .order("count", { ascending: false })
+      .limit(3) as { data: Array<{ userId: string; users: Array<{ name: string }>; count: number }> | null; error: any }
+    
+    if (error) {
+      console.error("Error fetching top contributors:", error)
+      return []
+    }
+    
+    return data ? data.map(contributor => ({
+      userId: contributor.userId,
+      name: Array.isArray(contributor.users) && contributor.users.length > 0 ? contributor.users[0].name : "Unknown Contributor",
+      count: contributor.count
+    })) : []
+  } catch (error) {
+    console.error("Error in getTopContributors:", error)
+    return []
+  }
+}
+
+//Get leaderboard
+export async function getLeaderboard(): Promise<any[]> {
+  try {
+    const supabase = createServerComponentClient({ cookies })
+    
+    const { data, error } = await supabase
+      .from("ratings")
+      .select("userId, users!inner(name), count:count(*)")
+      .order("count", { ascending: false })
+      .limit(10) as { data: Array<{ userId: string; users: Array<{ name: string }>; count: number }> | null; error: any }
+    
+    if (error) {
+      console.error("Error fetching leaderboard:", error)
+      return []
+    }
+    
+    return data ? data.map(contributor => ({
+      userId: contributor.userId,
+      name: Array.isArray(contributor.users) && contributor.users.length > 0 ? contributor.users[0].name : "Unknown Contributor",
+      count: contributor.count
+    })) : []
+  } catch (error) {
+    console.error("Error in getLeaderboard:", error)
+    return []
+  }
+}
+
+//Get user historical data
+export async function getUserHistoricalData(userId: string): Promise<any> {
+  try {
+    const supabase = createServerComponentClient({ cookies })
+    
+    const { data, error } = await supabase
+      .from("ratings")
+      .select("value, category, createdAt")
+      .eq("userId", userId)
+      .order("createdAt", { ascending: true })
+    
+    if (error) {
+      console.error("Error fetching user historical data:", error)
+      return []
+    }
+    
+    return data || []
+  } catch (error) {
+    console.error("Error in getUserHistoricalData:", error)
+    return []
+  }
+}
+
+//Get top raters
+export async function getTopRaters(): Promise<any[]> {
+  try {
+    const supabase = createServerComponentClient({ cookies })
+    
+    const { data, error } = await supabase
+      .from("ratings")
+      .select("userId, users!inner(name), count:count(*)")
+      .order("count", { ascending: false })
+      .limit(10) as { data: Array<{ userId: string; users: Array<{ name: string }>; count: number }> | null; error: any }
+    
+    if (error) {
+      console.error("Error fetching top raters:", error)
+      return []
+    }
+    
+    return data ? data.map(rater => ({
+      userId: rater.userId,
+      name: Array.isArray(rater.users) && rater.users.length > 0 ? rater.users[0].name : "Unknown Rater",
+      count: rater.count
+    })) : []
+  } catch (error) {
+    console.error("Error in getTopRaters:", error)
+    return []
   }
 }
